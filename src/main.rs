@@ -1,3 +1,4 @@
+mod builtin_words;
 use console;
 use rand::{self, Rng};
 use std::io::{self, Write};
