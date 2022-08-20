@@ -18,9 +18,11 @@ pub fn test_mode(opt: &Opt) {
     let mut keyboard = [LetterState::X; 26];
     let mut win = false;
     let mut tries = 0;
+    let mut last_word: Option<String> = None;
 
     for _ in 0..6 {
-        let guess = input_guess();
+        let guess = input_guess(&opt, &last_word, &answer_word);
+        last_word = Some(guess.clone());
 
         tries += 1;
         let state = judge(guess.trim(), &answer_word);
@@ -28,12 +30,8 @@ pub fn test_mode(opt: &Opt) {
             print!("{:?}", state[i]);
             // Update the keyboard state
             // guess.chars().nth(i).unwrap().to_ascii_lowercase() as usize - 'a' as usize   the index of a ascii character
-            if keyboard[guess.chars().nth(i).unwrap().to_ascii_lowercase() as usize - 'a' as usize]
-                < state[i]
-            {
-                keyboard
-                    [guess.chars().nth(i).unwrap().to_ascii_lowercase() as usize - 'a' as usize] =
-                    state[i].clone();
+            if keyboard[guess.chars().nth(i).unwrap() as usize - 'a' as usize] < state[i] {
+                keyboard[guess.chars().nth(i).unwrap() as usize - 'a' as usize] = state[i].clone();
             }
         }
         print!(" ");
@@ -54,11 +52,11 @@ pub fn test_mode(opt: &Opt) {
 }
 
 /// Return the words state
-fn judge(words: &str, answer: &str) -> Vec<LetterState> {
+fn judge(guess: &str, answer: &str) -> Vec<LetterState> {
     use LetterState::*;
     let mut words_state = vec![R, R, R, R, R];
     let mut answer_state = vec![R, R, R, R, R];
-    let words_vec: Vec<char> = words.chars().collect();
+    let words_vec: Vec<char> = guess.chars().collect();
     let answer_vec: Vec<char> = answer.chars().collect();
     for i in 0..5 {
         if words_vec[i] == answer_vec[i] {
@@ -94,14 +92,48 @@ fn get_answer_word(opt: &Opt) -> String {
     return answer_word;
 }
 
-fn get_state(opt: &Opt, answer_word: &String, guess: &String, keyboard: &mut [LetterState; 26]) {}
+fn check_guess_in_difficult(guess: &String, last_word: &String, answer: &String) -> bool {
+    let word_state = judge(guess, answer);
+    let last_state = judge(last_word, answer);
+    let mut used = vec![];
+    // All green should be same
+    for i in 0..5 {
+        if last_state[i] == LetterState::G {
+            if word_state[i] != LetterState::G {
+                return false;
+            }
+            used.push(i);
+        }
+    }
+    // Yellow letter should be used again or be green
+    for i in 0..5 {
+        if last_state[i] == LetterState::Y {
+            let mut matched = false;
+            for j in 0..5 {
+                if !used.contains(&j)
+                    && word_state[j] > last_state[i]
+                    && guess.chars().nth(j) == last_word.chars().nth(i)
+                {
+                    used.push(j);
+                    matched = true;
+                    break;
+                }
+            }
+            if matched == false {
+                return false;
+            }
+        }
+    }
+    return true;
+}
 
-fn input_guess() -> String {
+/// Handle the guess input
+fn input_guess(opt: &Opt, last_word: &Option<String>, answer: &String) -> String {
     let mut guess = String::new();
     loop {
         guess.clear();
         stdin().read_line(&mut guess).expect("");
-        guess = guess.trim().to_string();
+        guess = guess.trim().to_string().to_ascii_lowercase();
         // unqualified length
         if guess.trim().chars().count() != 5 {
             println!("INVALID");
@@ -116,6 +148,15 @@ fn input_guess() -> String {
         if !ACCEPTABLE.contains(&guess.as_str()) {
             println!("INVALID");
             continue;
+        }
+        // difficult mode
+        if opt.difficult == true {
+            if last_word.is_some() {
+                if !check_guess_in_difficult(&guess, last_word.clone().as_mut().unwrap(), &answer) {
+                    println!("INVALID");
+                    continue;
+                }
+            }
         }
         break;
     }
