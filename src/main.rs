@@ -12,6 +12,9 @@ pub struct Opt {
 
     #[structopt(short = "D", long)]
     difficult: bool,
+
+    #[structopt(short = "t", long)]
+    stats: bool,
 }
 
 /// The main function for the Wordle game, implement your own logic here
