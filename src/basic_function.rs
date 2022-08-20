@@ -3,24 +3,12 @@ use rand::Rng;
 use std::io::stdin;
 
 /// G > Y > R > X
-#[derive(PartialEq, Copy, Clone, Eq, PartialOrd, Ord)]
+#[derive(PartialEq, Copy, Clone, Eq, PartialOrd, Ord, Debug)]
 enum LetterState {
     X,
     R,
     Y,
     G,
-}
-
-impl LetterState {
-    fn to_str(&self) -> &str {
-        use LetterState::*;
-        match *self {
-            R => "R",
-            Y => "Y",
-            G => "G",
-            X => "G",
-        }
-    }
 }
 
 /// Return the words state
@@ -117,20 +105,19 @@ pub fn interactivate_mode() {
 
 /// Test mode
 pub fn test_mode() {
-    let answer_word: String = FINAL[rand::thread_rng().gen_range(0..FINAL.len())].to_string();
+    let mut answer_word: String = String::new();
+    stdin().read_line(&mut answer_word).expect("");
+    // let answer_word: String = FINAL[rand::thread_rng().gen_range(0..FINAL.len())].to_string();
     let mut keyboard = [LetterState::X; 26];
     let mut win = false;
     let mut tries = 0;
     for _ in 0..6 {
         let mut guess = String::new();
-
         // Read until valid
         loop {
-            // stdin error
-            if let Err(_) = stdin().read_line(&mut guess) {
-                println!("INVALID");
-                continue;
-            }
+            guess.clear();
+            stdin().read_line(&mut guess).expect("");
+            guess = guess.trim().to_string();
             // unqualified length
             if guess.trim().chars().count() != 5 {
                 println!("INVALID");
@@ -141,13 +128,18 @@ pub fn test_mode() {
                 println!("INVALID");
                 continue;
             }
+            // not in word list
+            if !ACCEPTABLE.contains(&guess.as_str()) {
+                println!("INVALID");
+                continue;
+            }
             break;
         }
 
         tries += 1;
         let state = judge(guess.trim(), &answer_word);
         for i in 0..5 {
-            print!("{}", state[i].to_str());
+            print!("{:?}", state[i]);
             // Update the keyboard state
             // guess.chars().nth(i).unwrap().to_ascii_lowercase() as usize - 'a' as usize   the index of a ascii character
             if keyboard[guess.chars().nth(i).unwrap().to_ascii_lowercase() as usize - 'a' as usize]
@@ -160,7 +152,7 @@ pub fn test_mode() {
         }
         print!(" ");
         for i in keyboard.iter() {
-            print!("{}", i.to_str());
+            print!("{:?}", i);
         }
         print!("\n");
         if state.iter().all(|x| *x == LetterState::G) {
@@ -171,6 +163,6 @@ pub fn test_mode() {
     if win == true {
         println!("CORRECT {}", tries);
     } else {
-        println!("FAILED {}", answer_word);
+        println!("FAILED {}", answer_word.to_ascii_uppercase());
     }
 }
