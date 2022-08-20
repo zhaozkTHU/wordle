@@ -1,13 +1,17 @@
 mod basic_function;
 mod builtin_words;
-use console;
-use std::io::{self, Write};
 use structopt::StructOpt;
 
 #[derive(StructOpt, Debug)]
 pub struct Opt {
     #[structopt(short, long)]
     word: Option<String>,
+
+    #[structopt(short, long)]
+    random: bool,
+
+    #[structopt(short = "D", long)]
+    difficult: bool,
 }
 
 /// The main function for the Wordle game, implement your own logic here
@@ -38,9 +42,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     // TODO: parse the arguments in `args`
 
     if is_tty {
-        basic_function::test_mode(opt.word);
+        basic_function::test_mode(&opt);
     } else {
-        basic_function::test_mode(opt.word);
+        basic_function::test_mode(&opt);
     }
 
     Ok(())
