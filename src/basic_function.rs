@@ -1,4 +1,5 @@
 use crate::builtin_words::*;
+use crate::Opt;
 use rand::Rng;
 use std::io::stdin;
 
@@ -104,9 +105,13 @@ pub fn interactivate_mode() {
 }
 
 /// Test mode
-pub fn test_mode() {
+pub fn test_mode(word: Option<String>) {
     let mut answer_word: String = String::new();
-    stdin().read_line(&mut answer_word).expect("");
+    if word.is_some() {
+        answer_word = word.unwrap();
+    } else {
+        stdin().read_line(&mut answer_word).expect("");
+    }
     // let answer_word: String = FINAL[rand::thread_rng().gen_range(0..FINAL.len())].to_string();
     let mut keyboard = [LetterState::X; 26];
     let mut win = false;

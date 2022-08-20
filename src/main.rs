@@ -4,20 +4,15 @@ use console;
 use std::io::{self, Write};
 use structopt::StructOpt;
 
-#[derive(StructOpt)]
-struct Opt {
+#[derive(StructOpt, Debug)]
+pub struct Opt {
     #[structopt(short, long)]
-    word: String,
-
-    #[structopt(short, long)]
-    random: bool,
-
-    #[structopt(short, long)]
-    difficult: bool,
+    word: Option<String>,
 }
 
 /// The main function for the Wordle game, implement your own logic here
 fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let opt = Opt::from_args();
     let is_tty = atty::is(atty::Stream::Stdout);
 
     // if is_tty {
@@ -43,9 +38,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     // TODO: parse the arguments in `args`
 
     if is_tty {
-        basic_function::test_mode();
+        basic_function::test_mode(opt.word);
     } else {
-        basic_function::test_mode()
+        basic_function::test_mode(opt.word);
     }
 
     Ok(())
