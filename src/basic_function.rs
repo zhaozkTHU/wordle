@@ -73,13 +73,16 @@ pub fn test_mode(opt: &Opt) {
             );
             // TODO
             let mut tmp = words_frequency.clone();
-            for _ in 0..5 {
+            for i in 0..5 {
                 if tmp.is_empty() {
                     break;
                 }
+                if i != 0 {
+                    print!(" ");
+                }
                 let max = tmp.iter().rev().max_by_key(|x| x.1).unwrap();
                 let a = max.0.clone();
-                print!("{} {} ", max.0.to_ascii_uppercase(), max.1);
+                print!("{} {}", max.0.to_ascii_uppercase(), max.1);
                 tmp.remove(&a);
             }
             print!("\n");
