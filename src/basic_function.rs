@@ -87,14 +87,14 @@ pub fn test_mode(opt: &Opt) {
         if opt.word.is_none() || opt.stats {
             let mut again = String::new();
             let bytes = stdin().read_line(&mut again).unwrap();
-            if again.trim() == "N" || bytes == 0 {
+            if again.trim() == "N" || bytes == 0 || again == "\n" {
                 break;
             }
             if again.trim() == "Y" {
                 continue;
             }
-            break;
         }
+        break;
     } // Loop end
 }
 
