@@ -1,6 +1,8 @@
 use crate::builtin_words::*;
 use crate::Opt;
+use rand::seq::SliceRandom;
 use rand::Rng;
+use rand::SeedableRng;
 use std::collections::BTreeMap;
 use std::io::stdin;
 
@@ -19,8 +21,11 @@ pub fn test_mode(opt: &Opt) {
     let mut total_tries: u32 = 0;
     let mut used_answer: Vec<String> = Vec::new();
     let mut words_frequency: BTreeMap<String, u32> = BTreeMap::new();
+
+    let mut day = opt.day.unwrap_or(1);
+
     loop {
-        let answer_word: String = get_answer_word(opt, &mut used_answer);
+        let answer_word: String = get_answer_word(opt, &mut used_answer, day);
 
         let mut keyboard = [LetterState::X; 26];
         let mut win = false;
@@ -94,6 +99,7 @@ pub fn test_mode(opt: &Opt) {
                 break;
             }
             if again.trim() == "Y" {
+                day += 1;
                 continue;
             }
         }
@@ -131,9 +137,16 @@ fn judge(guess: &str, answer: &str) -> Vec<LetterState> {
     return words_state;
 }
 
-fn get_answer_word(opt: &Opt, used_answer: &mut Vec<String>) -> String {
+fn get_answer_word(opt: &Opt, used_answer: &mut Vec<String>, day: usize) -> String {
     let mut answer_word: String = String::new();
     if opt.random == true {
+        if opt.word.is_some() {
+            unreachable!()
+        }
+        if opt.day.is_some() {
+            let seed = opt.seed.unwrap_or(0);
+            return FINAL[ans(day, seed)].to_string();
+        }
         loop {
             answer_word = FINAL[rand::thread_rng().gen_range(0..FINAL.len())].to_string();
             if !used_answer.contains(&answer_word) {
@@ -142,6 +155,9 @@ fn get_answer_word(opt: &Opt, used_answer: &mut Vec<String>) -> String {
             }
         }
     } else {
+        if opt.day.is_some() || opt.seed.is_some() {
+            unreachable!();
+        }
         if opt.word.is_some() {
             answer_word = opt.word.clone().unwrap();
         } else {
@@ -149,6 +165,14 @@ fn get_answer_word(opt: &Opt, used_answer: &mut Vec<String>) -> String {
         }
     }
     return answer_word;
+}
+
+/// Return the random index of FINAL
+fn ans(d: usize, s: u64) -> usize {
+    let mut rng = rand::rngs::StdRng::seed_from_u64(s);
+    let mut answer_vec: Vec<usize> = (0..FINAL.len()).collect();
+    answer_vec.shuffle(&mut rng);
+    return answer_vec[d - 1];
 }
 
 fn check_guess_in_difficult(guess: &String, last_word: &String, answer: &String) -> bool {

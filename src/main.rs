@@ -15,6 +15,12 @@ pub struct Opt {
 
     #[structopt(short = "t", long)]
     stats: bool,
+
+    #[structopt(short, long)]
+    seed: Option<u64>,
+
+    #[structopt(short, long)]
+    day: Option<usize>,
 }
 
 /// The main function for the Wordle game, implement your own logic here
