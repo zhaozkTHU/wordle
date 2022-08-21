@@ -1,5 +1,7 @@
 mod basic_function;
 mod builtin_words;
+use std::path::PathBuf;
+
 use structopt::StructOpt;
 
 #[derive(StructOpt, Debug)]
@@ -21,6 +23,12 @@ pub struct Opt {
 
     #[structopt(short, long)]
     day: Option<usize>,
+
+    #[structopt(short, long, parse(from_os_str))]
+    final_set: Option<PathBuf>,
+
+    #[structopt(short, long, parse(from_os_str))]
+    acceptable_set: Option<PathBuf>,
 }
 
 /// The main function for the Wordle game, implement your own logic here

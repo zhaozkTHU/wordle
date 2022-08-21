@@ -1,10 +1,12 @@
-use crate::builtin_words::*;
 use crate::Opt;
 use rand::seq::SliceRandom;
 use rand::Rng;
 use rand::SeedableRng;
 use std::collections::BTreeMap;
+use std::fs::File;
 use std::io::stdin;
+use std::io::BufRead;
+use std::io::BufReader;
 
 /// G > Y > R > X
 #[derive(PartialEq, Copy, Clone, Eq, PartialOrd, Ord, Debug)]
@@ -22,10 +24,32 @@ pub fn test_mode(opt: &Opt) {
     let mut used_answer: Vec<String> = Vec::new();
     let mut words_frequency: BTreeMap<String, u32> = BTreeMap::new();
 
+    let mut acceptable_set: Vec<String> = Vec::new();
+    if opt.acceptable_set.is_none() {
+        acceptable_set = crate::builtin_words::ACCEPTABLE
+            .to_vec()
+            .iter_mut()
+            .map(|x| x.to_string())
+            .collect();
+    } else {
+        acceptable_set = get_acceptable_set(opt)
+    }
+
+    let mut final_set: Vec<String> = vec![];
+    if opt.final_set.is_none() {
+        final_set = crate::builtin_words::FINAL
+            .to_vec()
+            .iter_mut()
+            .map(|x| x.to_string())
+            .collect();
+    } else {
+        final_set = get_final_set(opt, &acceptable_set)
+    }
+
     let mut day = opt.day.unwrap_or(1);
 
     loop {
-        let answer_word: String = get_answer_word(opt, &mut used_answer, day);
+        let answer_word: String = get_answer_word(opt, &mut used_answer, day, &final_set);
 
         let mut keyboard = [LetterState::X; 26];
         let mut win = false;
@@ -33,7 +57,13 @@ pub fn test_mode(opt: &Opt) {
         let mut last_word: Option<String> = None;
 
         for _ in 0..6 {
-            let guess = input_guess(&opt, &last_word, &answer_word, &mut words_frequency);
+            let guess = input_guess(
+                &opt,
+                &last_word,
+                &answer_word,
+                &mut words_frequency,
+                &acceptable_set,
+            );
             last_word = Some(guess.clone());
 
             tries += 1;
@@ -137,7 +167,12 @@ fn judge(guess: &str, answer: &str) -> Vec<LetterState> {
     return words_state;
 }
 
-fn get_answer_word(opt: &Opt, used_answer: &mut Vec<String>, day: usize) -> String {
+fn get_answer_word(
+    opt: &Opt,
+    used_answer: &mut Vec<String>,
+    day: usize,
+    final_set: &Vec<String>,
+) -> String {
     let mut answer_word: String = String::new();
     if opt.random == true {
         if opt.word.is_some() {
@@ -145,10 +180,10 @@ fn get_answer_word(opt: &Opt, used_answer: &mut Vec<String>, day: usize) -> Stri
         }
         if opt.day.is_some() {
             let seed = opt.seed.unwrap_or(0);
-            return FINAL[ans(day, seed)].to_string();
+            return final_set[ans(day, seed, final_set)].clone();
         }
         loop {
-            answer_word = FINAL[rand::thread_rng().gen_range(0..FINAL.len())].to_string();
+            answer_word = final_set[rand::thread_rng().gen_range(0..final_set.len())].clone();
             if !used_answer.contains(&answer_word) {
                 used_answer.push(answer_word.clone());
                 break;
@@ -168,9 +203,9 @@ fn get_answer_word(opt: &Opt, used_answer: &mut Vec<String>, day: usize) -> Stri
 }
 
 /// Return the random index of FINAL
-fn ans(d: usize, s: u64) -> usize {
+fn ans(d: usize, s: u64, final_set: &Vec<String>) -> usize {
     let mut rng = rand::rngs::StdRng::seed_from_u64(s);
-    let mut answer_vec: Vec<usize> = (0..FINAL.len()).collect();
+    let mut answer_vec: Vec<usize> = (0..final_set.len()).collect();
     answer_vec.shuffle(&mut rng);
     return answer_vec[d - 1];
 }
@@ -216,6 +251,7 @@ fn input_guess(
     last_word: &Option<String>,
     answer: &String,
     word_frequency: &mut BTreeMap<String, u32>,
+    acceptable_set: &Vec<String>,
 ) -> String {
     let mut guess = String::new();
     loop {
@@ -233,7 +269,7 @@ fn input_guess(
             continue;
         }
         // not in word list
-        if !ACCEPTABLE.contains(&guess.as_str()) {
+        if !acceptable_set.contains(&guess) {
             println!("INVALID");
             continue;
         }
@@ -250,4 +286,54 @@ fn input_guess(
     }
     *word_frequency.entry(guess.clone()).or_insert(0) += 1;
     return guess;
+}
+
+fn get_acceptable_set(opt: &Opt) -> Vec<String> {
+    let mut acceptable_set: Vec<String> = vec![];
+    let file = File::open(opt.acceptable_set.clone().unwrap()).unwrap();
+    let reader = BufReader::new(file);
+
+    for line in reader.lines() {
+        let word = line.unwrap();
+        if word.trim().chars().count() != 5 {
+            panic!();
+        }
+        if word.trim().chars().any(|x| !x.is_ascii_alphabetic()) {
+            panic!();
+        }
+        if !crate::builtin_words::ACCEPTABLE.contains(&word.as_str()) {
+            panic!();
+        }
+        if acceptable_set.contains(&word) {
+            panic!();
+        }
+        acceptable_set.push(word.to_ascii_lowercase());
+    }
+    acceptable_set.sort();
+    return acceptable_set;
+}
+
+fn get_final_set(opt: &Opt, acceptable_set: &Vec<String>) -> Vec<String> {
+    let mut final_set: Vec<String> = vec![];
+    let file = File::open(opt.final_set.clone().unwrap()).unwrap();
+    let reader = BufReader::new(file);
+
+    for line in reader.lines() {
+        let word = line.unwrap();
+        if word.trim().chars().count() != 5 {
+            panic!();
+        }
+        if word.trim().chars().any(|x| !x.is_ascii_alphabetic()) {
+            panic!();
+        }
+        if !acceptable_set.contains(&word) {
+            panic!();
+        }
+        if final_set.contains(&word) {
+            panic!();
+        }
+        final_set.push(word.to_ascii_lowercase());
+    }
+    final_set.sort();
+    return final_set;
 }
