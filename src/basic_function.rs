@@ -3,6 +3,7 @@ use rand::seq::SliceRandom;
 use rand::Rng;
 use rand::SeedableRng;
 use std::collections::BTreeMap;
+use std::collections::HashMap;
 use std::fs::File;
 use std::io::stdin;
 use std::io::BufRead;
@@ -24,7 +25,7 @@ pub fn test_mode(opt: &Opt) {
     let mut used_answer: Vec<String> = Vec::new();
     let mut words_frequency: BTreeMap<String, u32> = BTreeMap::new();
 
-    let mut acceptable_set: Vec<String> = Vec::new();
+    let acceptable_set: Vec<String>;
     if opt.acceptable_set.is_none() {
         acceptable_set = crate::builtin_words::ACCEPTABLE
             .to_vec()
@@ -35,7 +36,7 @@ pub fn test_mode(opt: &Opt) {
         acceptable_set = get_acceptable_set(opt)
     }
 
-    let mut final_set: Vec<String> = vec![];
+    let final_set: Vec<String>;
     if opt.final_set.is_none() {
         final_set = crate::builtin_words::FINAL
             .to_vec()
@@ -289,6 +290,7 @@ fn input_guess(
 }
 
 fn get_acceptable_set(opt: &Opt) -> Vec<String> {
+    let mut hashm: HashMap<String, i8> = HashMap::new();
     let mut acceptable_set: Vec<String> = vec![];
     let file = File::open(opt.acceptable_set.clone().unwrap()).unwrap();
     let reader = BufReader::new(file);
@@ -304,7 +306,7 @@ fn get_acceptable_set(opt: &Opt) -> Vec<String> {
         if !crate::builtin_words::ACCEPTABLE.contains(&word.as_str()) {
             panic!();
         }
-        if acceptable_set.contains(&word) {
+        if hashm.insert(word.clone(), 0).is_some() {
             panic!();
         }
         acceptable_set.push(word.to_ascii_lowercase());
@@ -316,6 +318,7 @@ fn get_acceptable_set(opt: &Opt) -> Vec<String> {
 fn get_final_set(opt: &Opt, acceptable_set: &Vec<String>) -> Vec<String> {
     let mut final_set: Vec<String> = vec![];
     let file = File::open(opt.final_set.clone().unwrap()).unwrap();
+    let mut hmap: HashMap<String, i32> = HashMap::new();
     let reader = BufReader::new(file);
 
     for line in reader.lines() {
@@ -329,7 +332,7 @@ fn get_final_set(opt: &Opt, acceptable_set: &Vec<String>) -> Vec<String> {
         if !acceptable_set.contains(&word) {
             panic!();
         }
-        if final_set.contains(&word) {
+        if hmap.insert(word.clone(), 0).is_some() {
             panic!();
         }
         final_set.push(word.to_ascii_lowercase());
