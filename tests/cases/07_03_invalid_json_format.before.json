@@ -2,14 +2,14 @@
   "This is an invalid JSON",
   "total_rounds": 1,
   "games": [
-  {
-    "answer": "POSER",
-    "guesses": [
-      "HELLO",
-      "CRANE",
-      "POWER",
-      "POKER",
-      "POSER"
-    ]
+    {
+      "answer": "POSER",
+      "guesses": [
+        "HELLO",
+        "CRANE",
+        "POWER",
+        "POKER",
+        "POSER"
+      ]
+    }
   }
-}

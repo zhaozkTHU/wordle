@@ -29,6 +29,9 @@ pub struct Opt {
 
     #[structopt(short, long, parse(from_os_str))]
     acceptable_set: Option<PathBuf>,
+
+    #[structopt(short = "S", long)]
+    state: bool,
 }
 
 /// The main function for the Wordle game, implement your own logic here
