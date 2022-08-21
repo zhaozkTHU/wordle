@@ -3,7 +3,6 @@ use rand::seq::SliceRandom;
 use rand::Rng;
 use rand::SeedableRng;
 use std::collections::BTreeMap;
-use std::collections::HashMap;
 use std::fs::File;
 use std::io::stdin;
 use std::io::BufRead;
@@ -290,7 +289,6 @@ fn input_guess(
 }
 
 fn get_acceptable_set(opt: &Opt) -> Vec<String> {
-    let mut hashm: HashMap<String, i8> = HashMap::new();
     let mut acceptable_set: Vec<String> = vec![];
     let file = File::open(opt.acceptable_set.clone().unwrap()).unwrap();
     let reader = BufReader::new(file);
@@ -303,22 +301,26 @@ fn get_acceptable_set(opt: &Opt) -> Vec<String> {
         if word.trim().chars().any(|x| !x.is_ascii_alphabetic()) {
             panic!();
         }
-        if !crate::builtin_words::ACCEPTABLE.contains(&word.as_str()) {
+        if crate::builtin_words::ACCEPTABLE
+            .binary_search(&word.as_str())
+            .is_err()
+        {
             panic!();
         }
-        if hashm.insert(word.clone(), 0).is_some() {
+        if acceptable_set.binary_search(&word).is_ok() {
             panic!();
         }
-        acceptable_set.push(word.to_ascii_lowercase());
+        acceptable_set.insert(
+            acceptable_set.partition_point(|x| word > x.to_string()),
+            word,
+        );
     }
-    acceptable_set.sort();
     return acceptable_set;
 }
 
 fn get_final_set(opt: &Opt, acceptable_set: &Vec<String>) -> Vec<String> {
     let mut final_set: Vec<String> = vec![];
     let file = File::open(opt.final_set.clone().unwrap()).unwrap();
-    let mut hmap: HashMap<String, i32> = HashMap::new();
     let reader = BufReader::new(file);
 
     for line in reader.lines() {
@@ -329,14 +331,13 @@ fn get_final_set(opt: &Opt, acceptable_set: &Vec<String>) -> Vec<String> {
         if word.trim().chars().any(|x| !x.is_ascii_alphabetic()) {
             panic!();
         }
-        if !acceptable_set.contains(&word) {
+        if acceptable_set.binary_search(&word).is_err() {
             panic!();
         }
-        if hmap.insert(word.clone(), 0).is_some() {
+        if final_set.binary_search(&word).is_ok() {
             panic!();
         }
-        final_set.push(word.to_ascii_lowercase());
+        final_set.insert(final_set.partition_point(|x| word > x.to_string()), word);
     }
-    final_set.sort();
     return final_set;
 }
