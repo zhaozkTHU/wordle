@@ -48,13 +48,26 @@ pub fn test_mode(opt: &Opt) {
 
     let mut day = opt.day.unwrap_or(1);
 
+    let mut state: Option<crate::json_parse::State> = None;
+    if opt.state.is_some() {
+        state = Some(crate::json_parse::State::load(
+            opt,
+            &mut total_win,
+            &mut total_lose,
+            &mut total_tries,
+            &mut used_answer,
+            &mut words_frequency,
+        ));
+    }
+
     loop {
         let answer_word: String = get_answer_word(opt, &mut used_answer, day, &final_set);
 
         let mut keyboard = [LetterState::X; 26];
         let mut win = false;
         let mut tries = 0;
-        let mut last_word: Option<String> = None;
+        let mut last_word: Option<String> = None; //difficult mode use
+        let mut guesses: Vec<String> = Vec::new(); // save state use
 
         for _ in 0..6 {
             let guess = input_guess(
@@ -64,7 +77,8 @@ pub fn test_mode(opt: &Opt) {
                 &mut words_frequency,
                 &acceptable_set,
             );
-            last_word = Some(guess.clone());
+            guesses.push(guess.clone());
+            last_word = Some(guess.clone()); // this will be only used in next loop
 
             tries += 1;
             let state = judge(&guess.trim(), &answer_word.trim());
@@ -87,6 +101,7 @@ pub fn test_mode(opt: &Opt) {
                 break;
             }
         }
+
         if win == true {
             println!("CORRECT {}", tries);
             total_win += 1;
@@ -95,6 +110,7 @@ pub fn test_mode(opt: &Opt) {
             println!("FAILED {}", answer_word.trim().to_ascii_uppercase());
             total_lose += 1;
         }
+
         if opt.stats == true {
             println!(
                 "{} {} {:.2}",
@@ -106,7 +122,6 @@ pub fn test_mode(opt: &Opt) {
                     total_tries as f32 / total_win as f32
                 }
             );
-            // TODO
             let mut tmp = words_frequency.clone();
             for i in 0..5 {
                 if tmp.is_empty() {
@@ -122,6 +137,14 @@ pub fn test_mode(opt: &Opt) {
             }
             print!("\n");
         }
+
+        if opt.state.is_some() {
+            let mut tmp = state.unwrap();
+            tmp.add_game(crate::json_parse::Game::new(answer_word.clone(), guesses));
+            tmp.save(opt);
+            state = Some(tmp);
+        }
+
         if opt.word.is_none() || opt.stats {
             let mut again = String::new();
             let bytes = stdin().read_line(&mut again).unwrap();
