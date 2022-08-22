@@ -13,6 +13,8 @@ rand = "0.8.5"
 text_io = "0.1.12"
 structopt = "0.3.26"
 serde = { version = "1.0.144", features = ["derive"] }
+tui = "0.19"
+crossterm = "0.25"
 
 [dev-dependencies]
 lazy_static = "1.0"

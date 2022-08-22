@@ -10,24 +10,24 @@ use std::io::BufReader;
 
 /// G > Y > R > X
 #[derive(PartialEq, Copy, Clone, Eq, PartialOrd, Ord, Debug)]
-enum LetterState {
+pub enum LetterState {
     X,
     R,
     Y,
     G,
 }
 
-struct KeyboardState {
+pub struct KeyboardState {
     keyboard_state: [LetterState; 26],
 }
 
 impl KeyboardState {
-    fn new() -> KeyboardState {
+    pub fn new() -> KeyboardState {
         KeyboardState {
             keyboard_state: [LetterState::X; 26],
         }
     }
-    fn update(&mut self, guess: &String, game_state: &[LetterState; 5]) {
+    pub fn update(&mut self, guess: &String, game_state: &[LetterState; 5]) {
         for i in 0..5 {
             // Update the keyboard state
             // guess.chars().nth(i).unwrap().to_ascii_lowercase() as usize - 'a' as usize   the index of a ascii character
@@ -39,7 +39,7 @@ impl KeyboardState {
             }
         }
     }
-    fn to_string(&self) -> String {
+    pub fn to_string(&self) -> String {
         let mut res = String::new();
         for i in self.keyboard_state.iter() {
             res += &format!("{:?}", i)
@@ -58,7 +58,7 @@ pub struct GameData {
 }
 
 impl GameData {
-    fn new() -> GameData {
+    pub fn new() -> GameData {
         GameData {
             total_win: 0,
             total_lose: 0,
@@ -85,16 +85,16 @@ impl GameData {
     pub fn push_used_answer(&mut self, answer: &String) {
         self.used_answer.push(answer.to_string());
     }
-    fn get_win(&self) -> u32 {
+    pub fn get_win(&self) -> u32 {
         return self.total_win;
     }
-    fn get_lose(&self) -> u32 {
+    pub fn get_lose(&self) -> u32 {
         return self.total_lose;
     }
-    fn get_words_frequency(&self) -> BTreeMap<String, u32> {
+    pub fn get_words_frequency(&self) -> BTreeMap<String, u32> {
         return self.words_frequency.clone();
     }
-    fn get_win_rate(&self) -> f32 {
+    pub fn get_win_rate(&self) -> f32 {
         if self.total_win == 0 {
             0 as f32
         } else {
@@ -103,106 +103,8 @@ impl GameData {
     }
 }
 
-/// Test mode: tty false
-pub fn test_mode(opt: &Opt) {
-    let mut game_data = GameData::new();
-
-    let acceptable_set = get_acceptable_set(opt);
-    let final_set = get_final_set(opt, &acceptable_set);
-
-    let mut day = opt.day.unwrap_or(1);
-
-    let mut state = crate::json_parse::State::load(opt, &mut game_data);
-
-    loop {
-        let answer_word: String = get_answer_word(opt, &mut game_data, day, &final_set);
-
-        let mut keyboard = KeyboardState::new();
-        let mut win = false;
-        let mut tries: u32 = 0;
-        let mut last_word: Option<String> = None; //difficult mode use
-        let mut guesses: Vec<String> = Vec::new(); // save state use
-
-        for _ in 0..6 {
-            let guess = input_guess(
-                &opt,
-                &last_word,
-                &answer_word,
-                &mut game_data,
-                &acceptable_set,
-            );
-            guesses.push(guess.clone());
-            last_word = Some(guess.clone()); // this will be only used in next loop
-
-            tries += 1;
-            let word_state = judge(&guess.trim(), &answer_word.trim());
-            keyboard.update(&guess, &word_state);
-            for i in word_state.iter() {
-                print!("{:?}", i);
-            }
-            print!(" {}\n", keyboard.to_string());
-            if word_state.iter().all(|x| *x == LetterState::G) {
-                win = true;
-                break;
-            }
-        }
-
-        if win == true {
-            game_data.add_win();
-            game_data.add_tries(tries);
-            println!("CORRECT {}", tries);
-        } else {
-            game_data.add_lose();
-            println!("FAILED {}", answer_word.trim().to_ascii_uppercase());
-        }
-
-        if opt.stats == true {
-            println!(
-                "{} {} {:.2}",
-                game_data.get_win(),
-                game_data.get_lose(),
-                game_data.get_win_rate()
-            );
-            let mut tmp = game_data.get_words_frequency();
-            for i in 0..5 {
-                if tmp.is_empty() {
-                    break;
-                }
-                if i != 0 {
-                    print!(" ");
-                }
-                let max = tmp.iter().rev().max_by_key(|x| x.1).unwrap();
-                let a = max.0.clone();
-                print!("{} {}", max.0.to_ascii_uppercase(), max.1);
-                tmp.remove(&a);
-            }
-            print!("\n");
-        }
-
-        if opt.state.is_some() {
-            let mut tmp = state.unwrap();
-            tmp.add_game(crate::json_parse::Game::new(answer_word.clone(), guesses));
-            tmp.save(opt);
-            state = Some(tmp);
-        }
-
-        if opt.word.is_none() || opt.stats {
-            let mut again = String::new();
-            let bytes = stdin().read_line(&mut again).unwrap();
-            if again.trim() == "N" || bytes == 0 || again == "\n" {
-                break;
-            }
-            if again.trim() == "Y" {
-                day += 1;
-                continue;
-            }
-        }
-        break;
-    } // Loop end
-}
-
 /// Return the words state
-fn judge(guess: &str, answer: &str) -> [LetterState; 5] {
+pub fn judge(guess: &str, answer: &str) -> [LetterState; 5] {
     use LetterState::*;
     let mut words_state = [R, R, R, R, R];
     let mut answer_state = [R, R, R, R, R];
@@ -232,7 +134,7 @@ fn judge(guess: &str, answer: &str) -> [LetterState; 5] {
 }
 
 /// Get answer word
-fn get_answer_word(
+pub fn get_answer_word(
     opt: &Opt,
     game_state: &mut GameData,
     day: usize,
@@ -311,7 +213,7 @@ fn check_guess_in_difficult(guess: &String, last_word: &String, answer: &String)
 }
 
 /// Handle the guess input
-fn input_guess(
+pub fn input_guess(
     opt: &Opt,
     last_word: &Option<String>,
     answer: &String,
@@ -353,7 +255,7 @@ fn input_guess(
     return guess;
 }
 
-fn get_acceptable_set(opt: &Opt) -> Vec<String> {
+pub fn get_acceptable_set(opt: &Opt) -> Vec<String> {
     if opt.acceptable_set.is_none() {
         return crate::builtin_words::ACCEPTABLE
             .to_vec()
@@ -391,7 +293,7 @@ fn get_acceptable_set(opt: &Opt) -> Vec<String> {
     return acceptable_set;
 }
 
-fn get_final_set(opt: &Opt, acceptable_set: &Vec<String>) -> Vec<String> {
+pub fn get_final_set(opt: &Opt, acceptable_set: &Vec<String>) -> Vec<String> {
     if opt.final_set.is_none() {
         return crate::builtin_words::FINAL
             .to_vec()

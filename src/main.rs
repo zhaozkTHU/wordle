@@ -1,6 +1,8 @@
 mod basic_function;
 mod builtin_words;
+mod interactive_mode;
 mod json_parse;
+mod test_mode;
 
 use structopt::StructOpt;
 
@@ -78,9 +80,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     // TODO: parse the arguments in `args`
 
     if is_tty {
-        basic_function::test_mode(&opt);
+        interactive_mode::interactive_mode(&opt);
     } else {
-        basic_function::test_mode(&opt);
+        test_mode::test_mode(&opt);
     }
 
     Ok(())
