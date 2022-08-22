@@ -1,7 +1,6 @@
 mod basic_function;
 mod builtin_words;
 mod json_parse;
-use std::path::PathBuf;
 
 use structopt::StructOpt;
 
@@ -25,19 +24,25 @@ pub struct Opt {
     #[structopt(short, long)]
     day: Option<usize>,
 
-    #[structopt(short, long, parse(from_os_str))]
-    final_set: Option<PathBuf>,
+    #[structopt(short, long)]
+    final_set: Option<String>,
 
-    #[structopt(short, long, parse(from_os_str))]
-    acceptable_set: Option<PathBuf>,
+    #[structopt(short, long)]
+    acceptable_set: Option<String>,
 
-    #[structopt(short = "S", long, parse(from_os_str))]
-    state: Option<PathBuf>,
+    #[structopt(short = "S", long)]
+    state: Option<String>,
+
+    #[structopt(short, long)]
+    config: Option<String>,
 }
 
 /// The main function for the Wordle game, implement your own logic here
 fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let opt = Opt::from_args();
+    let mut opt = Opt::from_args();
+    if opt.config.is_some() {
+        opt = json_parse::parse_config(&opt.config, &opt);
+    }
     let is_tty = atty::is(atty::Stream::Stdout);
 
     // if is_tty {

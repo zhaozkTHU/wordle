@@ -88,3 +88,96 @@ impl Game {
         Game { answer, guesses }
     }
 }
+
+pub fn parse_config(config_path: &Option<String>, opt: &crate::Opt) -> crate::Opt {
+    let file = File::open(config_path.clone().unwrap()).unwrap();
+    let reader = BufReader::new(file);
+    let config: serde_json::Value = serde_json::from_reader(reader).unwrap();
+    Opt {
+        word: if opt.word.is_some() {
+            opt.word.clone()
+        } else {
+            if config["word"].is_string() {
+                Some(config["word"].as_str().unwrap().to_string())
+            } else {
+                None
+            }
+        },
+
+        random: if opt.random == true {
+            true
+        } else {
+            if config["random"].is_boolean() {
+                config["random"].as_bool().unwrap()
+            } else {
+                false
+            }
+        },
+
+        difficult: if opt.difficult == true {
+            true
+        } else {
+            if config["difficult"].is_boolean() {
+                config["difficult"].as_bool().unwrap()
+            } else {
+                false
+            }
+        },
+
+        stats: if opt.stats == true {
+            true
+        } else {
+            if config["stats"].is_boolean() {
+                config["stats"].as_bool().unwrap()
+            } else {
+                false
+            }
+        },
+
+        seed: if opt.seed.is_some() {
+            opt.seed.clone()
+        } else {
+            if config["seed"].is_u64() {
+                Some(config["seed"].as_u64().unwrap())
+            } else {
+                None
+            }
+        },
+
+        day: if opt.day.is_some() {
+            opt.day.clone()
+        } else {
+            if config["day"].is_i64() {
+                Some(config["day"].as_i64().unwrap() as usize)
+            } else {
+                None
+            }
+        },
+
+        final_set: if opt.final_set.is_some() {
+            opt.final_set.clone()
+        } else if config["final_set"].is_string() {
+            Some(config["final_set"].as_str().unwrap().to_string())
+        } else {
+            None
+        },
+
+        acceptable_set: if opt.acceptable_set.is_some() {
+            opt.acceptable_set.clone()
+        } else if config["acceptable_set"].is_string() {
+            Some(config["acceptable_set"].as_str().unwrap().to_string())
+        } else {
+            None
+        },
+
+        state: if opt.state.is_some() {
+            opt.state.clone()
+        } else if config["state"].is_string() {
+            Some(config["state"].as_str().unwrap().to_string())
+        } else {
+            None
+        },
+
+        config: Some(config_path.clone().unwrap()),
+    }
+}
