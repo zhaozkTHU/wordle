@@ -1,7 +1,6 @@
 use crate::Opt;
 use serde::Deserialize;
 use serde::Serialize;
-use std::collections::BTreeMap;
 use std::fs::OpenOptions;
 use std::io::Write;
 use std::{fs::File, io::BufReader};
@@ -19,14 +18,11 @@ pub struct Game {
 }
 
 impl State {
-    pub fn load(
-        opt: &Opt,
-        total_win: &mut u32,
-        total_lose: &mut u32,
-        total_tries: &mut u32,
-        used_answer: &mut Vec<String>,
-        word_frequency: &mut BTreeMap<String, u32>,
-    ) -> State {
+    /// Load from opt.state and modify variables
+    pub fn load(opt: &Opt, game_state: &mut crate::basic_function::GameData) -> Option<State> {
+        if opt.state.is_none() {
+            return None;
+        }
         let file = File::open(opt.state.clone().unwrap()).unwrap();
         let reader = BufReader::new(file);
         let state: State = serde_json::from_reader(reader).unwrap();
@@ -34,27 +30,27 @@ impl State {
         if state.games.is_some() {
             let games = state.games.clone().unwrap();
             for game in games.iter() {
-                used_answer.push(game.answer.clone());
+                game_state.push_used_answer(&game.answer);
                 let win = Some(&game.answer) == game.guesses.last();
                 if win {
-                    *total_win += 1;
+                    game_state.add_win();
                 } else {
-                    *total_lose += 1;
+                    game_state.add_lose();
                 }
 
                 for guess in game.guesses.iter() {
-                    *word_frequency
-                        .entry(guess.to_string().to_ascii_lowercase())
-                        .or_insert(0) += 1;
+                    game_state.insert_word_frequency(guess);
                     if win {
-                        *total_tries += 1;
+                        game_state.add_tries(1);
                     }
                 }
             }
         }
 
-        return state;
+        return Some(state);
     }
+
+    /// Write json to file
     pub fn save(&self, opt: &Opt) {
         let mut write = OpenOptions::new()
             .write(true)
@@ -65,6 +61,8 @@ impl State {
             .write_all(serde_json::to_string_pretty(self).unwrap().as_bytes())
             .unwrap();
     }
+
+    /// Add game to self.games
     pub fn add_game(&mut self, game: Game) {
         if self.total_rounds.is_none() {
             self.total_rounds = Some(1);

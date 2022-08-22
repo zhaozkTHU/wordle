@@ -6,33 +6,43 @@ use structopt::StructOpt;
 
 #[derive(StructOpt, Debug)]
 pub struct Opt {
+    /// Specify word
     #[structopt(short, long)]
     word: Option<String>,
 
+    /// Random answer word
     #[structopt(short, long)]
     random: bool,
 
+    /// Difficult mode
     #[structopt(short = "D", long)]
     difficult: bool,
 
+    /// Print stats after game
     #[structopt(short = "t", long)]
     stats: bool,
 
+    /// Seed in difficult mode
     #[structopt(short, long)]
     seed: Option<u64>,
 
+    /// Start in nth day
     #[structopt(short, long)]
     day: Option<usize>,
 
+    /// Get final set from file
     #[structopt(short, long)]
     final_set: Option<String>,
 
+    /// Get acceptable set from file
     #[structopt(short, long)]
     acceptable_set: Option<String>,
 
+    /// Save and load in a json file
     #[structopt(short = "S", long)]
     state: Option<String>,
 
+    /// Load configs from a json file
     #[structopt(short, long)]
     config: Option<String>,
 }
