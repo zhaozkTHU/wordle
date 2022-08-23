@@ -53,7 +53,7 @@ pub struct GameData {
     total_win: u32,
     total_lose: u32,
     total_tries: u32,
-    used_answer: Vec<String>,
+    pub used_answer: Vec<String>,
     words_frequency: BTreeMap<String, u32>,
 }
 
@@ -170,7 +170,7 @@ pub fn get_answer_word(
 }
 
 /// Return the random index of FINAL
-fn ans(d: usize, s: u64, final_set: &Vec<String>) -> usize {
+pub fn ans(d: usize, s: u64, final_set: &Vec<String>) -> usize {
     let mut rng = rand::rngs::StdRng::seed_from_u64(s);
     let mut answer_vec: Vec<usize> = (0..final_set.len()).collect();
     answer_vec.shuffle(&mut rng);
@@ -217,7 +217,7 @@ pub fn input_guess(
     opt: &Opt,
     last_word: &Option<String>,
     answer: &String,
-    game_state: &mut GameData,
+    game_data: &mut GameData,
     acceptable_set: &Vec<String>,
 ) -> String {
     let mut guess = String::new();
@@ -226,12 +226,12 @@ pub fn input_guess(
         stdin().read_line(&mut guess).expect("");
         guess = guess.trim().to_string().to_ascii_lowercase();
         // unqualified length
-        if guess.trim().chars().count() != 5 {
+        if guess.chars().count() != 5 {
             println!("INVALID");
             continue;
         }
         // should be all letters
-        if guess.trim().chars().any(|x| !x.is_ascii_alphabetic()) {
+        if guess.chars().any(|x| !x.is_ascii_alphabetic()) {
             println!("INVALID");
             continue;
         }
@@ -251,7 +251,7 @@ pub fn input_guess(
         }
         break;
     }
-    game_state.insert_word_frequency(&guess);
+    game_data.insert_word_frequency(&guess);
     return guess;
 }
 

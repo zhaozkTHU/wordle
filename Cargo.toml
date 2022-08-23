@@ -16,6 +16,7 @@ serde = { version = "1.0.144", features = ["derive"] }
 tui = "0.19"
 crossterm = "0.25"
 unicode-width = "0.1.9"
+colored = "2.0.0"
 
 [dev-dependencies]
 lazy_static = "1.0"

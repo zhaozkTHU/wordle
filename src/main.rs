@@ -5,6 +5,9 @@ mod interactive_mode;
 mod json_parse;
 mod solver;
 mod test_mode;
+mod tui;
+
+use std::io::stdin;
 
 use structopt::StructOpt;
 
@@ -86,7 +89,14 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     // TODO: parse the arguments in `args`
 
     if is_tty {
-        interactive_mode::main()?;
+        let mut tmp = String::new();
+        println!("Do you want to play in TUI? Y/N");
+        stdin().read_line(&mut tmp)?;
+        match tmp.trim() {
+            "Y" => tui::main(&opt)?,
+            "N" => interactive_mode::interactive_mode(&opt),
+            _ => return Ok(()),
+        }
     } else {
         test_mode::test_mode(&opt);
     }

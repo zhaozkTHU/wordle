@@ -1,223 +1,196 @@
-/// A simple example demonstrating how to handle user input. This is
-/// a bit out of the scope of the library as it does not provide any
-/// input handling out of the box. However, it may helps some to get
-/// started.
-///
-/// This is a very simple example:
-///   * A input box always focused. Every character you type is registered
-///   here
-///   * Pressing Backspace erases a character
-///   * Pressing Enter pushes the current input in the history of previous
-///   messages
-use crossterm::{
-    event::{self, DisableMouseCapture, EnableMouseCapture, Event, KeyCode},
-    execute,
-    terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
-};
-use std::{error::Error, io};
-use tui::{
-    backend::{Backend, CrosstermBackend},
-    layout::{Alignment, Constraint, Direction, Layout},
-    style::{Color, Modifier, Style},
-    text::{Span, Spans, Text},
-    widgets::{Block, BorderType, Borders, List, ListItem, Paragraph},
-    Frame, Terminal,
-};
-use unicode_width::UnicodeWidthStr;
+use crate::basic_function::*;
+use crate::Opt;
+use colored::*;
 
-enum InputMode {
-    Normal,
-    Editing,
-}
+pub fn interactive_mode(opt: &Opt) {
+    let mut game_data = GameData::new();
 
-enum MessageMode {
-    Valid,
-    Invalid,
-    Empty,
-    Tryagain,
-}
+    let acceptable_set = get_acceptable_set(opt);
+    let final_set = get_final_set(opt, &acceptable_set);
 
-/// App holds the state of the application
-struct App {
-    /// Current value of the input box
-    input: String,
-    /// Current input mode
-    input_mode: InputMode,
-    /// History of recorded messages
-    messages: Vec<String>,
-}
+    let mut day = opt.day.unwrap_or(1);
 
-impl Default for App {
-    fn default() -> App {
-        App {
-            input: String::new(),
-            input_mode: InputMode::Normal,
-            messages: Vec::new(),
-        }
-    }
-}
+    let mut state = crate::json_parse::State::load(opt, &mut game_data);
 
-pub fn main() -> Result<(), Box<dyn Error>> {
-    // setup terminal
-    enable_raw_mode()?;
-    let mut stdout = io::stdout();
-    execute!(stdout, EnterAlternateScreen, EnableMouseCapture)?;
-    let backend = CrosstermBackend::new(stdout);
-    let mut terminal = Terminal::new(backend)?;
-
-    // create app and run it
-    let app = App::default();
-    let res = run_app(&mut terminal, app);
-
-    // restore terminal
-    disable_raw_mode()?;
-    execute!(
-        terminal.backend_mut(),
-        LeaveAlternateScreen,
-        DisableMouseCapture
-    )?;
-    terminal.show_cursor()?;
-
-    if let Err(err) = res {
-        println!("{:?}", err)
-    }
-
-    Ok(())
-}
-
-fn run_app<B: Backend>(terminal: &mut Terminal<B>, mut app: App) -> io::Result<()> {
     loop {
-        terminal.draw(|f| ui(f, &app))?;
+        if opt.word.is_none() && !opt.random {
+            println!("{}", "Please input your answer:".bold());
+        }
+        let answer_word: String = get_answer_word(opt, &mut game_data, day, &final_set);
 
-        if let Event::Key(key) = event::read()? {
-            match app.input_mode {
-                InputMode::Normal => match key.code {
-                    KeyCode::Char('e') => {
-                        app.input_mode = InputMode::Editing;
+        let mut keyboard = KeyboardState::new();
+        let mut win = false;
+        let mut tries: u32 = 0;
+        let mut last_word: Option<String> = None; //difficult mode use
+        let mut guesses: Vec<String> = Vec::new(); // save state use
+
+        let mut known_info: Vec<(String, [LetterState; 5])> = vec![];
+
+        let mut hint_acceptable = acceptable_set.clone();
+
+        for x in 0..6 {
+            if opt.hint && x != 0 {
+                println!("Hint:");
+                let mut hint = crate::solver::solver(&known_info, &hint_acceptable);
+                if hint.len() == 0 {
+                    hint = crate::solver::solver(&known_info, &acceptable_set);
+                }
+
+                for i in 0..hint.len() {
+                    print!("{} ", hint[i])
+                }
+
+                print!("\n");
+            }
+
+            println!("{}", "Please input your guess:".bold());
+            let guess = input_guess(
+                &opt,
+                &last_word,
+                &answer_word,
+                &mut game_data,
+                &acceptable_set,
+            );
+
+            guesses.push(guess.clone());
+            last_word = Some(guess.clone()); // this will be only used in next loop
+
+            let word_state = judge(&guess.trim(), &answer_word.trim());
+            keyboard.update(&guess, &word_state);
+
+            tries += 1;
+            for i in word_state.iter().enumerate() {
+                match i.1 {
+                    LetterState::G => print!(
+                        "{}",
+                        guess
+                            .chars()
+                            .nth(i.0)
+                            .unwrap()
+                            .to_ascii_uppercase()
+                            .to_string()
+                            .bold()
+                            .green()
+                    ),
+                    LetterState::R => print!(
+                        "{}",
+                        guess
+                            .chars()
+                            .nth(i.0)
+                            .unwrap()
+                            .to_ascii_uppercase()
+                            .to_string()
+                            .bold()
+                            .red()
+                    ),
+                    LetterState::Y => print!(
+                        "{}",
+                        guess
+                            .chars()
+                            .nth(i.0)
+                            .unwrap()
+                            .to_ascii_uppercase()
+                            .to_string()
+                            .bold()
+                            .green()
+                    ),
+                    _ => {
+                        panic!();
                     }
-                    KeyCode::Char('q') => {
-                        return Ok(());
-                    }
-                    _ => {}
-                },
-                InputMode::Editing => match key.code {
-                    KeyCode::Enter => {
-                        let guess: String = app.input.drain(..).collect();
-                        app.messages.push(guess);
-                    }
-                    KeyCode::Char(c) => {
-                        app.input.push(c);
-                    }
-                    KeyCode::Backspace => {
-                        app.input.pop();
-                    }
-                    KeyCode::Esc => {
-                        app.input_mode = InputMode::Normal;
-                    }
-                    _ => {}
-                },
+                }
+            }
+            print!(" ");
+            keyboard_to_color(&keyboard);
+
+            known_info.push((guess.clone(), word_state));
+            hint_acceptable = crate::solver::filter(&known_info, &hint_acceptable);
+
+            if word_state.iter().all(|x| *x == LetterState::G) {
+                win = true;
+                break;
             }
         }
-    }
+
+        if win == true {
+            game_data.add_win();
+            game_data.add_tries(tries);
+            println!(
+                "{} {}",
+                "CORRECT".green().bold(),
+                tries.to_string().bold().bright_yellow()
+            );
+        } else {
+            game_data.add_lose();
+            println!(
+                "{} {}",
+                "FAILED".red().bold(),
+                answer_word.trim().to_ascii_uppercase().bold().green()
+            );
+        }
+
+        if opt.stats == true {
+            println!(
+                "WIN:{} LOSE:{} WIN_RATE:{:.2}",
+                game_data.get_win().to_string().green().bold(),
+                game_data.get_lose().to_string().red().bold(),
+                game_data.get_win_rate().to_string().bold()
+            );
+            let mut tmp = game_data.get_words_frequency();
+            for i in 0..5 {
+                if tmp.is_empty() {
+                    break;
+                }
+                if i != 0 {
+                    print!(" ");
+                }
+                let max = tmp.iter().rev().max_by_key(|x| x.1).unwrap();
+                let a = max.0.clone();
+                print!("{} {}", max.0.to_ascii_uppercase(), max.1);
+                tmp.remove(&a);
+            }
+            print!("\n");
+        }
+
+        if opt.state.is_some() {
+            let mut tmp = state.unwrap();
+            tmp.add_game(crate::json_parse::Game::new(answer_word.clone(), guesses));
+            tmp.save(opt);
+            state = Some(tmp);
+        }
+
+        println!("{}", "Do you want to play again? Y/N".bold());
+        if opt.word.is_none() || opt.stats {
+            let mut again = String::new();
+            let bytes = std::io::stdin().read_line(&mut again).unwrap();
+            if again.trim() == "N" || bytes == 0 || again == "\n" {
+                break;
+            }
+            if again.trim() == "Y" {
+                day += 1;
+                continue;
+            }
+        }
+        break;
+    } // Loop end
 }
 
-fn ui<B: Backend>(f: &mut Frame<B>, app: &App) {
-    let block = Block::default()
-        .borders(Borders::ALL)
-        .title("Wordle Game")
-        .title_alignment(Alignment::Center)
-        .border_type(BorderType::Rounded);
-    f.render_widget(block, f.size());
-
-    let chunks = Layout::default()
-        .direction(Direction::Vertical)
-        .margin(3)
-        .constraints(
-            [
-                Constraint::Length(1),
-                Constraint::Length(3),
-                Constraint::Min(1),
-            ]
-            .as_ref(),
-        )
-        .split(f.size());
-
-    let display_chunks = Layout::default()
-        .direction(Direction::Horizontal)
-        .margin(0)
-        .constraints([Constraint::Percentage(50), Constraint::Percentage(50)].as_ref())
-        .split(chunks[2]);
-
-    let output_hint_chunks = Layout::default()
-        .direction(Direction::Vertical)
-        .constraints([Constraint::Length(4), Constraint::Min(3)].as_ref())
-        .split(display_chunks[1]);
-
-    let (msg, style) = match app.input_mode {
-        InputMode::Normal => (
-            vec![
-                Span::raw("Press "),
-                Span::styled("q", Style::default().add_modifier(Modifier::BOLD)),
-                Span::raw(" to exit, "),
-                Span::styled("e", Style::default().add_modifier(Modifier::BOLD)),
-                Span::raw(" to start editing."),
-            ],
-            Style::default().add_modifier(Modifier::RAPID_BLINK),
-        ),
-        InputMode::Editing => (
-            vec![
-                Span::raw("Press "),
-                Span::styled("Esc", Style::default().add_modifier(Modifier::BOLD)),
-                Span::raw(" to stop editing, "),
-                Span::styled("Enter", Style::default().add_modifier(Modifier::BOLD)),
-                Span::raw(" to record the message"),
-            ],
-            Style::default(),
-        ),
-    };
-    let mut text = Text::from(Spans::from(msg));
-    text.patch_style(style);
-    let help_message = Paragraph::new(text);
-    f.render_widget(help_message, chunks[0]);
-
-    let input = Paragraph::new(app.input.as_ref())
-        .style(match app.input_mode {
-            InputMode::Normal => Style::default(),
-            InputMode::Editing => Style::default().fg(Color::Yellow),
-        })
-        .block(Block::default().borders(Borders::ALL).title("Input"));
-    f.render_widget(input, chunks[1]);
-    match app.input_mode {
-        InputMode::Normal =>
-            // Hide the cursor. `Frame` does this by default, so we don't need to do anything here
-            {}
-
-        InputMode::Editing => {
-            // Make the cursor visible and ask tui-rs to put it at the specified coordinates after rendering
-            f.set_cursor(
-                // Put cursor past the end of the input text
-                chunks[1].x + app.input.width() as u16 + 1,
-                // Move one line down, from the border to the input line
-                chunks[1].y + 1,
-            )
+fn keyboard_to_color(keyboard: &KeyboardState) {
+    for i in 0..26 {
+        match keyboard.keyboard_state[i] {
+            LetterState::X => print!("{}", (('A' as u8 + i as u8) as char).to_string().bold()),
+            LetterState::G => print!(
+                "{}",
+                (('A' as u8 + i as u8) as char).to_string().bold().green()
+            ),
+            LetterState::Y => print!(
+                "{}",
+                (('A' as u8 + i as u8) as char).to_string().bold().yellow()
+            ),
+            LetterState::R => print!(
+                "{}",
+                (('A' as u8 + i as u8) as char).to_string().bold().red()
+            ),
         }
     }
-
-    let your_words: Vec<ListItem> = app
-        .messages
-        .iter()
-        .enumerate()
-        .map(|(i, m)| {
-            let content = vec![Spans::from(Span::raw(format!("{}: {}", i, m)))];
-            ListItem::new(content)
-        })
-        .collect();
-    let messages =
-        List::new(your_words).block(Block::default().borders(Borders::ALL).title("Your Words"));
-    f.render_widget(messages, display_chunks[0]);
-
-    let message = Paragraph::new("INVALID")
-        .style(Style::default())
-        .block(Block::default().borders(Borders::ALL).title("Message"));
-    f.render_widget(message, output_hint_chunks[0]);
+    print!("\n");
 }
