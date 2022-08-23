@@ -1,3 +1,4 @@
+mod all_state;
 mod basic_function;
 mod builtin_words;
 mod interactive_mode;
@@ -51,7 +52,7 @@ pub struct Opt {
 
     /// Enable solver
     #[structopt(short, long)]
-    hint: Option<u8>,
+    hint: bool,
 }
 
 /// The main function for the Wordle game, implement your own logic here

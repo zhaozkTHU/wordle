@@ -24,13 +24,20 @@ pub fn test_mode(opt: &crate::Opt) {
 
         let mut known_info: Vec<(String, [LetterState; 5])> = vec![];
 
+        let mut hint_acceptable = acceptable_set.clone();
+
         for x in 0..6 {
-            if opt.hint.is_some() && x != 0 {
-                let hint = crate::solver::solver(&known_info);
-                let shown = opt.hint.unwrap().min(hint.len() as u8);
-                for i in 0..shown {
-                    print!("{} ", hint.choose(&mut rand::thread_rng()).unwrap())
+            if opt.hint && x != 0 {
+                println!("Hint:");
+                let mut hint = crate::solver::solver(&known_info, &hint_acceptable);
+                if hint.len() == 0 {
+                    hint = crate::solver::solver(&known_info, &acceptable_set);
                 }
+
+                for i in 0..hint.len() {
+                    print!("{} ", hint[i])
+                }
+
                 print!("\n");
             }
 
@@ -41,17 +48,22 @@ pub fn test_mode(opt: &crate::Opt) {
                 &mut game_data,
                 &acceptable_set,
             );
+
             guesses.push(guess.clone());
             last_word = Some(guess.clone()); // this will be only used in next loop
 
-            tries += 1;
             let word_state = judge(&guess.trim(), &answer_word.trim());
-            known_info.push((guess.clone(), word_state));
             keyboard.update(&guess, &word_state);
+
+            tries += 1;
             for i in word_state.iter() {
                 print!("{:?}", i);
             }
             print!(" {}\n", keyboard.to_string());
+
+            known_info.push((guess.clone(), word_state));
+            hint_acceptable = crate::solver::filter(&known_info, &hint_acceptable);
+
             if word_state.iter().all(|x| *x == LetterState::G) {
                 win = true;
                 break;
