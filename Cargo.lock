@@ -704,4 +704,5 @@ dependencies = [
  "structopt",
  "text_io",
  "tui",
+ "unicode-width",
 ]

@@ -86,7 +86,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     // TODO: parse the arguments in `args`
 
     if is_tty {
-        test_mode::test_mode(&opt);
+        interactive_mode::main()?;
     } else {
         test_mode::test_mode(&opt);
     }

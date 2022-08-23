@@ -1,5 +1,3 @@
-use rand::seq::SliceRandom;
-
 use crate::basic_function::*;
 
 /// Test mode: tty false
