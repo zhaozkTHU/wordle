@@ -18,7 +18,7 @@ pub enum LetterState {
 }
 
 pub struct KeyboardState {
-    keyboard_state: [LetterState; 26],
+    pub keyboard_state: [LetterState; 26],
 }
 
 impl KeyboardState {
@@ -177,7 +177,7 @@ fn ans(d: usize, s: u64, final_set: &Vec<String>) -> usize {
     return answer_vec[d - 1];
 }
 
-fn check_guess_in_difficult(guess: &String, last_word: &String, answer: &String) -> bool {
+pub fn check_guess_in_difficult(guess: &String, last_word: &String, answer: &String) -> bool {
     let word_state = judge(guess, answer);
     let last_state = judge(last_word, answer);
     let mut used = vec![];

@@ -1,3 +1,5 @@
+use rand::seq::SliceRandom;
+
 use crate::basic_function::*;
 
 /// Test mode: tty false
@@ -20,7 +22,18 @@ pub fn test_mode(opt: &crate::Opt) {
         let mut last_word: Option<String> = None; //difficult mode use
         let mut guesses: Vec<String> = Vec::new(); // save state use
 
-        for _ in 0..6 {
+        let mut known_info: Vec<(String, [LetterState; 5])> = vec![];
+
+        for x in 0..6 {
+            if opt.hint.is_some() && x != 0 {
+                let hint = crate::solver::solver(&known_info);
+                let shown = opt.hint.unwrap().min(hint.len() as u8);
+                for i in 0..shown {
+                    print!("{} ", hint.choose(&mut rand::thread_rng()).unwrap())
+                }
+                print!("\n");
+            }
+
             let guess = input_guess(
                 &opt,
                 &last_word,
@@ -33,6 +46,7 @@ pub fn test_mode(opt: &crate::Opt) {
 
             tries += 1;
             let word_state = judge(&guess.trim(), &answer_word.trim());
+            known_info.push((guess.clone(), word_state));
             keyboard.update(&guess, &word_state);
             for i in word_state.iter() {
                 print!("{:?}", i);

@@ -2,6 +2,7 @@ mod basic_function;
 mod builtin_words;
 mod interactive_mode;
 mod json_parse;
+mod solver;
 mod test_mode;
 
 use structopt::StructOpt;
@@ -47,6 +48,10 @@ pub struct Opt {
     /// Load configs from a json file
     #[structopt(short, long)]
     config: Option<String>,
+
+    /// Enable solver
+    #[structopt(short, long)]
+    hint: Option<u8>,
 }
 
 /// The main function for the Wordle game, implement your own logic here
@@ -80,7 +85,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     // TODO: parse the arguments in `args`
 
     if is_tty {
-        interactive_mode::interactive_mode(&opt);
+        test_mode::test_mode(&opt);
     } else {
         test_mode::test_mode(&opt);
     }
