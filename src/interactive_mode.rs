@@ -12,7 +12,17 @@ pub fn interactive_mode(opt: &Opt) {
 
     let mut state = crate::json_parse::State::load(opt, &mut game_data);
 
+    let mut hint_acceptable: Vec<usize> = (0..acceptable_set.len()).collect();
+
     loop {
+        let hint = crate::solver::solver(&acceptable_set, &hint_acceptable);
+        if opt.hint {
+            print!("HINT: ");
+            for i in hint.iter() {
+                print!("{}", i.to_ascii_uppercase());
+            }
+            print!("\n");
+        }
         if opt.word.is_none() && !opt.random {
             println!("{}", "Please input your answer:".bold());
         }
@@ -39,6 +49,13 @@ pub fn interactive_mode(opt: &Opt) {
 
             let word_state = judge(&guess.trim(), &answer_word.trim());
             keyboard.update(&guess, &word_state);
+
+            if !hint.contains(&guess) {
+                hint_acceptable = (0..acceptable_set.len()).collect();
+            } else {
+                hint_acceptable =
+                    crate::solver::filter(&guess, &word_state, &acceptable_set, &hint_acceptable);
+            }
 
             tries += 1;
             for i in word_state.iter().enumerate() {
