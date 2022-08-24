@@ -24,25 +24,7 @@ pub fn interactive_mode(opt: &Opt) {
         let mut last_word: Option<String> = None; //difficult mode use
         let mut guesses: Vec<String> = Vec::new(); // save state use
 
-        let mut known_info: Vec<(String, [LetterState; 5])> = vec![];
-
-        let mut hint_acceptable = acceptable_set.clone();
-
-        for x in 0..6 {
-            if opt.hint && x != 0 {
-                println!("Hint:");
-                let mut hint = crate::solver::solver(&known_info, &hint_acceptable);
-                if hint.len() == 0 {
-                    hint = crate::solver::solver(&known_info, &acceptable_set);
-                }
-
-                for i in 0..hint.len() {
-                    print!("{} ", hint[i])
-                }
-
-                print!("\n");
-            }
-
+        for _ in 0..6 {
             println!("{}", "Please input your guess:".bold());
             let guess = input_guess(
                 &opt,
@@ -101,9 +83,6 @@ pub fn interactive_mode(opt: &Opt) {
             }
             print!(" ");
             keyboard_to_color(&keyboard);
-
-            known_info.push((guess.clone(), word_state));
-            hint_acceptable = crate::solver::filter(&known_info, &hint_acceptable);
 
             if word_state.iter().all(|x| *x == LetterState::G) {
                 win = true;

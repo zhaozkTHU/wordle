@@ -163,7 +163,7 @@ pub fn get_answer_word(
         if opt.word.is_some() {
             answer_word = opt.word.clone().unwrap();
         } else {
-            stdin().read_line(&mut answer_word).expect("");
+            stdin().read_line(&mut answer_word).unwrap();
         }
     }
     return answer_word;
