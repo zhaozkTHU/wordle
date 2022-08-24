@@ -12,17 +12,8 @@ pub fn interactive_mode(opt: &Opt) {
 
     let mut state = crate::json_parse::State::load(opt, &mut game_data);
 
-    let mut hint_acceptable: Vec<usize> = (0..acceptable_set.len()).collect();
-
     loop {
-        let hint = crate::solver::solver(&acceptable_set, &hint_acceptable);
-        if opt.hint {
-            print!("HINT: ");
-            for i in hint.iter() {
-                print!("{}", i.to_ascii_uppercase());
-            }
-            print!("\n");
-        }
+        let mut hint_acceptable: Vec<usize> = (0..final_set.len()).collect();
         if opt.word.is_none() && !opt.random {
             println!("{}", "Please input your answer:".bold());
         }
@@ -35,6 +26,14 @@ pub fn interactive_mode(opt: &Opt) {
         let mut guesses: Vec<String> = Vec::new(); // save state use
 
         for _ in 0..6 {
+            let hint = crate::solver::solver(&final_set, &hint_acceptable);
+            if opt.hint {
+                print!("HINT: ");
+                for i in hint.iter() {
+                    print!("{}", i.to_ascii_uppercase());
+                }
+                print!("\n");
+            }
             println!("{}", "Please input your guess:".bold());
             let guess = input_guess(
                 &opt,
@@ -51,10 +50,10 @@ pub fn interactive_mode(opt: &Opt) {
             keyboard.update(&guess, &word_state);
 
             if !hint.contains(&guess) {
-                hint_acceptable = (0..acceptable_set.len()).collect();
+                hint_acceptable = (0..final_set.len()).collect();
             } else {
                 hint_acceptable =
-                    crate::solver::filter(&guess, &word_state, &acceptable_set, &hint_acceptable);
+                    crate::solver::filter(&guess, &word_state, &final_set, &hint_acceptable);
             }
 
             tries += 1;

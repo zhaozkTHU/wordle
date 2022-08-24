@@ -1,14 +1,13 @@
-use std::collections::{BTreeMap, BTreeSet, HashMap};
-
 use crate::{all_state::ALL_STATE, basic_function::LetterState};
+use tqdm::tqdm;
 
 pub fn solver(acceptable_set: &Vec<String>, hint_acceptable: &Vec<usize>) -> Vec<String> {
     let mut res: Vec<String> = vec![];
     let mut entropy: Vec<(String, f64)> = Vec::new();
     // 让可接受的单词每个都作为答案
-    for i in hint_acceptable.iter() {
+    for i in tqdm(hint_acceptable.iter()) {
         let word = acceptable_set[*i].clone();
-        println!("{}", word);
+        // println!("{}", word);
         let mut word_entropy = 0.0;
         for i in ALL_STATE {
             let l = filter(&word, &i, &acceptable_set, hint_acceptable).len();
