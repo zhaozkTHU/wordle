@@ -93,7 +93,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         println!("Do you want to play in TUI? Y/N");
         stdin().read_line(&mut tmp)?;
         match tmp.trim() {
-            "Y" => tui::main(&opt)?,
+            "Y" => {
+                crate::tui::tui(&opt)?;
+            }
             "N" => interactive_mode::interactive_mode(&opt),
             _ => return Ok(()),
         }

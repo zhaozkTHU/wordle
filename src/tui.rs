@@ -14,6 +14,7 @@ use crossterm::{
     execute,
     terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
 };
+use rand::Rng;
 use std::{
     error::Error,
     io::{self},
@@ -33,6 +34,7 @@ use crate::{
         check_guess_in_difficult, get_acceptable_set, get_final_set, judge, GameData,
         KeyboardState, LetterState,
     },
+    builtin_words::{ACCEPTABLE, FINAL},
     Opt,
 };
 
@@ -61,6 +63,14 @@ pub struct App {
     your_words: Vec<String>,
 
     message_mode: MessageMode,
+
+    answer: String,
+
+    keyboard: KeyboardState,
+
+    word_state: Vec<[LetterState; 5]>,
+
+    tries: u32,
 }
 
 impl Default for App {
@@ -70,11 +80,15 @@ impl Default for App {
             input_mode: InputMode::Normal,
             your_words: Vec::new(),
             message_mode: MessageMode::Input,
+            answer: String::new(),
+            keyboard: KeyboardState::new(),
+            word_state: Vec::new(),
+            tries: 0,
         }
     }
 }
 
-pub fn main(opt: &Opt) -> Result<(), Box<dyn Error>> {
+pub fn tui(opt: &Opt) -> Result<(), Box<dyn Error>> {
     // setup terminal
     enable_raw_mode()?;
     let mut stdout = io::stdout();
@@ -108,25 +122,8 @@ pub fn main(opt: &Opt) -> Result<(), Box<dyn Error>> {
 }
 
 fn run_app<B: Backend>(terminal: &mut Terminal<B>, mut app: App, opt: &Opt) -> io::Result<()> {
-    let mut game_data = GameData::new();
-
-    let acceptable_set = get_acceptable_set(opt);
-    let final_set = get_final_set(opt, &acceptable_set);
-
-    let mut day = opt.day.unwrap_or(1);
-
-    let mut state = crate::json_parse::State::load(opt, &mut game_data);
-
     // Round loop
     loop {
-        let mut answer_word = String::new();
-
-        let mut keyboard = KeyboardState::new();
-        let mut win = false;
-        let mut tries: u32 = 0;
-        let mut last_word: Option<String> = None;
-        let mut guesses: Vec<String> = Vec::new();
-
         loop {
             terminal.draw(|f| ui(f, &app))?;
 
@@ -143,45 +140,63 @@ fn run_app<B: Backend>(terminal: &mut Terminal<B>, mut app: App, opt: &Opt) -> i
                     },
                     InputMode::Editing => match key.code {
                         KeyCode::Enter => {
-                            let input: String = app.input.drain(..).collect();
+                            let input = app
+                                .input
+                                .drain(..)
+                                .collect::<String>()
+                                .trim()
+                                .to_string()
+                                .to_ascii_lowercase();
 
                             match app.message_mode {
                                 MessageMode::Fail | MessageMode::Win => {
-                                    let y = "Y".to_string();
-                                    match input {
-                                        y => app.message_mode = MessageMode::Answer,
+                                    app.tries = 0;
+                                    app.keyboard = KeyboardState::new();
+                                    app.word_state.clear();
+                                    app.your_words.clear();
+                                    app.answer.clear();
+                                    match input.as_str() {
+                                        "Y" | "y" => app.message_mode = MessageMode::Answer,
                                         _ => return Ok(()),
                                     }
                                 }
                                 MessageMode::Answer => {
-                                    answer_word = input.clone();
+                                    let answer_word = input.clone();
+                                    let mut valid = true;
+                                    if answer_word.len() != 5 {
+                                        valid = false;
+                                    }
+                                    if !answer_word.chars().all(|x| x.is_ascii_alphabetic()) {
+                                        valid = false;
+                                    }
+                                    if !FINAL.binary_search(&answer_word.as_str()).is_err() {
+                                        valid = false;
+                                    }
+                                    if valid {
+                                        app.answer = answer_word.to_string();
+                                    } else {
+                                        app.answer = FINAL
+                                            [rand::thread_rng().gen_range(0..FINAL.len())]
+                                        .to_string();
+                                    }
+                                    app.message_mode = MessageMode::Input;
                                 }
                                 MessageMode::Input | MessageMode::Invalid | MessageMode::Valid => {
-                                    if check_guess(
-                                        opt,
-                                        &input,
-                                        &last_word,
-                                        &answer_word,
-                                        &mut game_data,
-                                        &acceptable_set,
-                                        &mut app,
-                                    ) {
+                                    if check_guess(&input, &mut app) {
                                         app.your_words.push(input.clone());
                                         app.input.clear();
 
-                                        guesses.push(input.clone());
-                                        last_word = Some(input.clone());
+                                        let word_state = judge(&input.trim(), &app.answer.trim());
+                                        app.keyboard.update(&input, &word_state);
 
-                                        let word_state = judge(&input.trim(), &answer_word.trim());
-                                        keyboard.update(&input, &word_state);
+                                        app.word_state.push(word_state.clone());
 
-                                        tries += 1;
+                                        app.tries += 1;
 
                                         if word_state.iter().all(|x| *x == LetterState::G) {
                                             app.message_mode = MessageMode::Win;
-                                            win = true;
                                         } else {
-                                            if tries == 6 {
+                                            if app.tries == 6 {
                                                 app.message_mode = MessageMode::Fail;
                                             } else {
                                                 app.message_mode = MessageMode::Valid;
@@ -307,7 +322,7 @@ fn ui<B: Backend>(f: &mut Frame<B>, app: &App) {
         .iter()
         .enumerate()
         .map(|(i, m)| {
-            let content = vec![Spans::from(Span::raw(format!("{}: {}", i, m)))];
+            let content = vec![word_to_spans(i, m, &app)];
             ListItem::new(content)
         })
         .collect();
@@ -315,26 +330,18 @@ fn ui<B: Backend>(f: &mut Frame<B>, app: &App) {
         List::new(your_words).block(Block::default().borders(Borders::ALL).title("Your Words"));
     f.render_widget(messages, display_chunks[0]);
 
-    let message = Paragraph::new("INVALID")
+    let message = Paragraph::new(app_to_string(&app))
         .style(Style::default())
         .block(Block::default().borders(Borders::ALL).title("Message"));
     f.render_widget(message, output_hint_chunks[0]);
 
-    let keyboard = Paragraph::new("UNENABLED")
+    let keyboard = Paragraph::new(keyboard_to_spans(&app))
         .style(Style::default())
-        .block(Block::default().borders(Borders::ALL).title("KesyBoard"));
+        .block(Block::default().borders(Borders::ALL).title("KeyBoard"));
     f.render_widget(keyboard, output_hint_chunks[1]);
 }
 
-pub fn check_guess(
-    opt: &Opt,
-    guess: &String,
-    last_word: &Option<String>,
-    answer: &String,
-    game_data: &mut GameData,
-    accptable_set: &Vec<String>,
-    app: &mut App,
-) -> bool {
+pub fn check_guess(guess: &String, app: &mut App) -> bool {
     let guess = guess.trim().to_string().to_ascii_lowercase();
     if guess.chars().count() != 5 {
         app.message_mode = MessageMode::Invalid;
@@ -344,18 +351,136 @@ pub fn check_guess(
         app.message_mode = MessageMode::Invalid;
         return false;
     }
-    if !accptable_set.contains(&guess) {
+    if !ACCEPTABLE.contains(&guess.as_str()) {
         app.message_mode = MessageMode::Invalid;
         return false;
     }
-    if opt.difficult {
-        if last_word.is_some() {
-            if !check_guess_in_difficult(&guess, last_word.clone().as_mut().unwrap(), answer) {
-                app.message_mode = MessageMode::Invalid;
-                return false;
-            }
-        }
-    }
     app.message_mode = MessageMode::Valid;
     true
+}
+
+fn app_to_string(app: &App) -> String {
+    let res = match app.message_mode {
+        MessageMode::Answer => {
+            "Please input the answer \nIf you input invalid answer, it will be random".to_string()
+        }
+        MessageMode::Fail => {
+            format!("You failed. Answer:{}\n Wanna try again? Y/N", app.answer).to_string()
+        }
+        MessageMode::Input => "Please input your guess".to_string(),
+        MessageMode::Invalid => "Your guess is invalid. Try again".to_string(),
+        MessageMode::Valid => "Valid guess".to_string(),
+        MessageMode::Win => "You win! Wanna try again? Y/N".to_string(),
+    };
+    return res;
+}
+
+fn word_to_spans<'a>(i: usize, _m: &'a str, app: &'a App) -> Spans<'a> {
+    let mut tmp: Vec<Span> = vec![];
+    let word = app.your_words[i].clone();
+    let state = app.word_state[i];
+    let green = Style::default()
+        .fg(Color::Green)
+        .add_modifier(Modifier::BOLD);
+    let red = Style::default().fg(Color::Red).add_modifier(Modifier::BOLD);
+    let yellow = Style::default()
+        .fg(Color::Yellow)
+        .add_modifier(Modifier::BOLD);
+    for (i, ch) in word.chars().enumerate() {
+        match state[i] {
+            LetterState::G => tmp.push(Span::styled(ch.to_string().to_ascii_uppercase(), green)),
+            LetterState::R => tmp.push(Span::styled(ch.to_string().to_ascii_uppercase(), red)),
+            LetterState::Y => tmp.push(Span::styled(ch.to_string().to_ascii_uppercase(), yellow)),
+            _ => {}
+        }
+    }
+    let res = Spans::from(tmp);
+    return res;
+}
+
+fn keyboard_to_spans(app: &App) -> Vec<Spans> {
+    let mut res: Vec<Spans> = vec![];
+
+    let mut line1: Vec<Span> = vec![];
+    line1.push(char_to_span('q', app));
+    line1.push(Span::raw(" "));
+    line1.push(char_to_span('w', app));
+    line1.push(Span::raw(" "));
+    line1.push(char_to_span('e', app));
+    line1.push(Span::raw(" "));
+    line1.push(char_to_span('r', app));
+    line1.push(Span::raw(" "));
+    line1.push(char_to_span('t', app));
+    line1.push(Span::raw(" "));
+    line1.push(char_to_span('y', app));
+    line1.push(Span::raw(" "));
+    line1.push(char_to_span('u', app));
+    line1.push(Span::raw(" "));
+    line1.push(char_to_span('i', app));
+    line1.push(Span::raw(" "));
+    line1.push(char_to_span('o', app));
+    line1.push(Span::raw(" "));
+    line1.push(char_to_span('p', app));
+    res.push(Spans::from(line1));
+
+    let mut line2: Vec<Span> = vec![];
+    line2.push(Span::raw(" "));
+    line2.push(char_to_span('a', app));
+    line2.push(Span::raw(" "));
+    line2.push(char_to_span('s', app));
+    line2.push(Span::raw(" "));
+    line2.push(char_to_span('d', app));
+    line2.push(Span::raw(" "));
+    line2.push(char_to_span('f', app));
+    line2.push(Span::raw(" "));
+    line2.push(char_to_span('g', app));
+    line2.push(Span::raw(" "));
+    line2.push(char_to_span('h', app));
+    line2.push(Span::raw(" "));
+    line2.push(char_to_span('j', app));
+    line2.push(Span::raw(" "));
+    line2.push(char_to_span('k', app));
+    line2.push(Span::raw(" "));
+    line2.push(char_to_span('l', app));
+    res.push(Spans::from(line2));
+
+    let mut line3: Vec<Span> = vec![];
+    line3.push(Span::raw("  "));
+    line3.push(char_to_span('z', app));
+    line3.push(Span::raw(" "));
+    line3.push(char_to_span('x', app));
+    line3.push(Span::raw(" "));
+    line3.push(char_to_span('c', app));
+    line3.push(Span::raw(" "));
+    line3.push(char_to_span('v', app));
+    line3.push(Span::raw(" "));
+    line3.push(char_to_span('b', app));
+    line3.push(Span::raw(" "));
+    line3.push(char_to_span('n', app));
+    line3.push(Span::raw(" "));
+    line3.push(char_to_span('m', app));
+    res.push(Spans::from(line3));
+
+    return res;
+}
+
+fn char_to_span(ch: char, app: &App) -> Span {
+    let index = (ch as u8 - 'a' as u8) as usize;
+    let green = Style::default()
+        .fg(Color::Green)
+        .add_modifier(Modifier::BOLD);
+    let red = Style::default().fg(Color::Red).add_modifier(Modifier::BOLD);
+    let yellow = Style::default()
+        .fg(Color::Yellow)
+        .add_modifier(Modifier::BOLD);
+    let gray = Style::default()
+        .fg(Color::Gray)
+        .add_modifier(Modifier::BOLD);
+    let res = match app.keyboard.keyboard_state[index] {
+        LetterState::G => Span::styled(ch.to_ascii_uppercase().to_string(), green),
+        LetterState::R => Span::styled(ch.to_ascii_uppercase().to_string(), red),
+        LetterState::X => Span::styled(ch.to_ascii_uppercase().to_string(), gray),
+        LetterState::Y => Span::styled(ch.to_ascii_uppercase().to_string(), yellow),
+    };
+    return res;
 }
