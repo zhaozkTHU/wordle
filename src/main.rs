@@ -94,7 +94,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         stdin().read_line(&mut tmp)?;
         match tmp.trim() {
             "Y" => {
-                crate::tui::tui(&opt)?;
+                crate::tui::tui()?;
             }
             "N" => interactive_mode::interactive_mode(&opt),
             _ => return Ok(()),

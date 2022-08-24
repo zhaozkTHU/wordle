@@ -30,12 +30,8 @@ use tui::{
 use unicode_width::UnicodeWidthStr;
 
 use crate::{
-    basic_function::{
-        check_guess_in_difficult, get_acceptable_set, get_final_set, judge, GameData,
-        KeyboardState, LetterState,
-    },
+    basic_function::{judge, KeyboardState, LetterState},
     builtin_words::{ACCEPTABLE, FINAL},
-    Opt,
 };
 
 enum InputMode {
@@ -79,7 +75,7 @@ impl Default for App {
             input: String::new(),
             input_mode: InputMode::Normal,
             your_words: Vec::new(),
-            message_mode: MessageMode::Input,
+            message_mode: MessageMode::Answer,
             answer: String::new(),
             keyboard: KeyboardState::new(),
             word_state: Vec::new(),
@@ -88,7 +84,7 @@ impl Default for App {
     }
 }
 
-pub fn tui(opt: &Opt) -> Result<(), Box<dyn Error>> {
+pub fn tui() -> Result<(), Box<dyn Error>> {
     // setup terminal
     enable_raw_mode()?;
     let mut stdout = io::stdout();
@@ -97,13 +93,8 @@ pub fn tui(opt: &Opt) -> Result<(), Box<dyn Error>> {
     let mut terminal = Terminal::new(backend)?;
 
     // create app and run it
-    let mut app = App::default();
-    if opt.random {
-        app.message_mode = MessageMode::Input;
-    } else {
-        app.message_mode = MessageMode::Answer;
-    }
-    let res = run_app(&mut terminal, app, opt);
+    let app = App::default();
+    let res = run_app(&mut terminal, app);
 
     // restore terminal
     disable_raw_mode()?;
@@ -121,7 +112,7 @@ pub fn tui(opt: &Opt) -> Result<(), Box<dyn Error>> {
     Ok(())
 }
 
-fn run_app<B: Backend>(terminal: &mut Terminal<B>, mut app: App, opt: &Opt) -> io::Result<()> {
+fn run_app<B: Backend>(terminal: &mut Terminal<B>, mut app: App) -> io::Result<()> {
     // Round loop
     loop {
         loop {
