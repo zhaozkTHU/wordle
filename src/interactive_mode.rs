@@ -70,6 +70,12 @@ pub fn interactive_mode(opt: &Opt) {
                     filtered_answer = filter(i.0, i.1, &acceptable_set, &filtered_answer)
                 }
             }
+            if guess == "abaca" {
+                for i in filtered_answer.iter() {
+                    print!("{} ", acceptable_set[*i]);
+                }
+                println!();
+            }
 
             tries += 1;
             for i in guess_state.iter().enumerate() {

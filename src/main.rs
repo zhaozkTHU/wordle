@@ -60,6 +60,9 @@ pub struct Opt {
 
     #[structopt(long)]
     calculate: bool,
+
+    #[structopt(long)]
+    server: bool,
 }
 
 /// The main function for the Wordle game, implement your own logic here
@@ -70,8 +73,13 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     }
     let is_tty = atty::is(atty::Stream::Stdout);
 
+    if opt.server {
+        solver::inter_solver();
+    }
+
     if opt.calculate {
-        calculate_average::calculate_average();
+        calculate_average::calculate_average_answer();
+        calculate_average::calculate_average_begin();
         return Ok(());
     }
 

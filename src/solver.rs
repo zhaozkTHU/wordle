@@ -1,9 +1,49 @@
+use std::io::stdin;
+
 use crate::{
     all_state::ALL_STATE,
     basic_function::{judge, LetterState},
+    builtin_words::ACCEPTABLE,
 };
 use indicatif::ParallelProgressIterator;
 use rayon::prelude::{IntoParallelRefIterator, ParallelIterator};
+
+pub fn inter_solver() {
+    let acceptable_set: Vec<String> = ACCEPTABLE
+        .to_vec()
+        .iter_mut()
+        .map(|x| x.to_string())
+        .collect();
+    let mut filtered_answer: Vec<usize> = (0..acceptable_set.len()).collect();
+
+    println!("Please input: tares\n");
+    let mut guess = "tares".to_string();
+    loop {
+        println!("Please input the word state, like YRGYR\n");
+
+        let mut guess_state = [LetterState::X; 5];
+        let mut tmp: String = String::new();
+        stdin().read_line(&mut tmp).unwrap();
+        tmp = tmp.trim().chars().map(|x| x.to_ascii_uppercase()).collect();
+        for i in tmp.chars().enumerate() {
+            match i.1 {
+                'G' => guess_state[i.0] = LetterState::G,
+                'Y' => guess_state[i.0] = LetterState::Y,
+                'R' => guess_state[i.0] = LetterState::R,
+                _ => unreachable!(),
+            }
+        }
+
+        filtered_answer = filter(&guess, &guess_state, &acceptable_set, &filtered_answer);
+        guess = solver(&acceptable_set, &filtered_answer)[0].0.clone();
+        if solver(&acceptable_set, &filtered_answer).len() == 1 {
+            println!("The answer is {}", guess.to_ascii_uppercase());
+            return;
+        } else {
+            println!("Please input: {}", guess.to_ascii_uppercase());
+        }
+    }
+}
 
 pub fn solver(acceptable_set: &Vec<String>, filtered_answer: &Vec<usize>) -> Vec<(String, f64)> {
     if filtered_answer.len() == 1 {
@@ -48,6 +88,15 @@ pub fn filter(
                 } else {
                     used[i] = true;
                 }
+            }
+        }
+        if !qualified {
+            continue;
+        }
+        // abaca YRRRR   psalm
+        for i in guess.chars().zip(word.chars()).enumerate() {
+            if i.1 .0 == i.1 .1 && guess_state[i.0] != LetterState::G {
+                qualified = false;
             }
         }
         if !qualified {
