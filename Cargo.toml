@@ -19,6 +19,7 @@ unicode-width = "0.1.9"
 colored = "2.0.0"
 tqdm = "0.4.0"
 rayon = "1.5.3"
+indicatif = {version = "*", features = ["rayon"]}
 
 [dev-dependencies]
 lazy_static = "1.0"

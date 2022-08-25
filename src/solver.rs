@@ -2,22 +2,21 @@ use crate::{
     all_state::ALL_STATE,
     basic_function::{judge, LetterState},
 };
-use rayon::prelude::*;
-use tqdm::tqdm;
+use indicatif::ParallelProgressIterator;
+use rayon::prelude::{IntoParallelRefIterator, ParallelIterator};
 
 pub fn solver(acceptable_set: &Vec<String>, filtered_answer: &Vec<usize>) -> Vec<(String, f64)> {
     if filtered_answer.len() == 1 {
         return vec![(acceptable_set[filtered_answer[0]].clone(), 0.0)];
     }
     let mut res: Vec<(String, f64)> = vec![];
-    let mut entropy: Vec<(String, f64)> = Vec::new();
-    // 让可接受的单词每个都作为答案
-    for i in tqdm(acceptable_set.iter()) {
-        let word = i.clone();
-        // println!("{}", word);
-        let word_entropy = get_entropy(&word, acceptable_set, filtered_answer);
-        entropy.push((word, word_entropy));
-    }
+
+    let mut entropy: Vec<_> = acceptable_set
+        .par_iter()
+        .progress_count(acceptable_set.len() as u64)
+        .map(|i| (i.clone(), get_entropy(i, acceptable_set, filtered_answer)))
+        .collect();
+
     entropy.sort_by(|a, b| b.1.partial_cmp(&a.1).unwrap());
 
     for i in entropy.iter().enumerate() {
@@ -59,10 +58,14 @@ pub fn filter(
             if *j == LetterState::Y {
                 let mut found = false;
                 for a in word.chars().enumerate() {
-                    if a.1 == guess.chars().nth(i).unwrap() && !used[a.0] && a.0 != i {
-                        found = true;
-                        used[a.0] = true;
-                        break;
+                    if a.1 == guess.chars().nth(i).unwrap() && !used[a.0] {
+                        if a.0 == i {
+                            break;
+                        } else {
+                            found = true;
+                            used[a.0] = true;
+                            break;
+                        }
                     }
                 }
                 if !found {
@@ -90,14 +93,6 @@ pub fn filter(
             res.push(*i);
         }
     }
-    // if !filtered_answer
-    //     .iter()
-    //     .map(|x| acceptable_set[*x].clone())
-    //     .collect::<Vec<String>>()
-    //     .contains(&"amble".to_string())
-    // {
-    //     println!("panic {}", guess);
-    // }
     return res;
 }
 
@@ -108,13 +103,19 @@ fn get_entropy(guess: &String, acceptable_set: &Vec<String>, filtered_answer: &V
         let state = judge(guess, word);
         res[ALL_STATE.binary_search(&state).unwrap()] += 1;
     }
+    // if filtered_answer.len() == 2 {
+    //     println!("{:?}", res);
+    // }
     let mut entropy: f64 = 0.0;
     for i in res.iter() {
         if *i == 0 {
             continue;
         }
-        let p = *i as f64 / filtered_answer.len() as f64;
+        let p = (*i as f64) / (filtered_answer.len() as f64);
         entropy -= p * p.log2();
+        // if filtered_answer.len() == 2 {
+        //     println!("{}", entropy);
+        // }
     }
     return entropy;
 }

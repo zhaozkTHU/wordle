@@ -179,5 +179,7 @@ pub fn parse_config(config_path: &Option<String>, opt: &crate::Opt) -> crate::Op
         hint: opt.hint,
 
         config: Some(config_path.clone().unwrap()),
+
+        calculate: opt.calculate,
     }
 }
