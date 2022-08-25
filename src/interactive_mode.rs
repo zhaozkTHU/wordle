@@ -1,4 +1,5 @@
 use crate::basic_function::*;
+use crate::solver::filter;
 use crate::Opt;
 use colored::*;
 
@@ -13,7 +14,7 @@ pub fn interactive_mode(opt: &Opt) {
     let mut state = crate::json_parse::State::load(opt, &mut game_data);
 
     loop {
-        let mut hint_acceptable: Vec<usize> = (0..final_set.len()).collect();
+        let mut hint_acceptable: Vec<usize> = (0..acceptable_set.len()).collect();
         if opt.word.is_none() && !opt.random {
             println!("{}", "Please input your answer:".bold());
         }
@@ -24,13 +25,23 @@ pub fn interactive_mode(opt: &Opt) {
         let mut tries: u32 = 0;
         let mut last_word: Option<String> = None; //difficult mode use
         let mut guesses: Vec<String> = Vec::new(); // save state use
+        let mut guess_states: Vec<[LetterState; 5]> = Vec::new();
 
-        for _ in 0..6 {
-            let hint = crate::solver::solver(&final_set, &hint_acceptable);
+        for round in 0..6 {
+            let mut hint: Vec<String> = vec![
+                "tares".to_string(),
+                "lares".to_string(),
+                "rales".to_string(),
+                "rates".to_string(),
+                "teras".to_string(),
+            ];
             if opt.hint {
+                if round != 0 {
+                    hint = crate::solver::solver(&acceptable_set, &hint_acceptable);
+                }
                 print!("HINT: ");
                 for i in hint.iter() {
-                    print!("{}", i.to_ascii_uppercase());
+                    print!("{} ", i.purple());
                 }
                 print!("\n");
             }
@@ -46,18 +57,18 @@ pub fn interactive_mode(opt: &Opt) {
             guesses.push(guess.clone());
             last_word = Some(guess.clone()); // this will be only used in next loop
 
-            let word_state = judge(&guess.trim(), &answer_word.trim());
-            keyboard.update(&guess, &word_state);
+            let guess_state = judge(&guess.trim(), &answer_word.trim());
+            guess_states.push(guess_state.clone());
+            keyboard.update(&guess, &guess_state);
 
-            if !hint.contains(&guess) {
-                hint_acceptable = (0..final_set.len()).collect();
-            } else {
-                hint_acceptable =
-                    crate::solver::filter(&guess, &word_state, &final_set, &hint_acceptable);
+            if opt.hint {
+                for i in guesses.iter().zip(guess_states.iter()) {
+                    hint_acceptable = filter(i.0, i.1, &acceptable_set, &hint_acceptable)
+                }
             }
 
             tries += 1;
-            for i in word_state.iter().enumerate() {
+            for i in guess_state.iter().enumerate() {
                 match i.1 {
                     LetterState::G => print!(
                         "{}",
@@ -90,7 +101,7 @@ pub fn interactive_mode(opt: &Opt) {
                             .to_ascii_uppercase()
                             .to_string()
                             .bold()
-                            .green()
+                            .yellow()
                     ),
                     _ => {
                         panic!();
@@ -100,7 +111,7 @@ pub fn interactive_mode(opt: &Opt) {
             print!(" ");
             keyboard_to_color(&keyboard);
 
-            if word_state.iter().all(|x| *x == LetterState::G) {
+            if guess_state.iter().all(|x| *x == LetterState::G) {
                 win = true;
                 break;
             }

@@ -1,4 +1,7 @@
-use crate::{all_state::ALL_STATE, basic_function::LetterState};
+use crate::{
+    all_state::ALL_STATE,
+    basic_function::{judge, LetterState},
+};
 use tqdm::tqdm;
 
 pub fn solver(acceptable_set: &Vec<String>, hint_acceptable: &Vec<usize>) -> Vec<String> {
@@ -8,19 +11,11 @@ pub fn solver(acceptable_set: &Vec<String>, hint_acceptable: &Vec<usize>) -> Vec
     for i in tqdm(hint_acceptable.iter()) {
         let word = acceptable_set[*i].clone();
         // println!("{}", word);
-        let mut word_entropy = 0.0;
-        for i in ALL_STATE {
-            let l = filter(&word, &i, &acceptable_set, hint_acceptable).len();
-            if l == 0 {
-                continue;
-            } else {
-                let p = l as f64 / hint_acceptable.len() as f64;
-                word_entropy -= p * p.log2();
-            }
-        }
-        entropy.push((word.clone(), word_entropy));
+        let word_entropy = get_entropy(&word, acceptable_set, hint_acceptable);
+        entropy.push((word, word_entropy));
     }
     entropy.sort_by(|a, b| b.1.partial_cmp(&a.1).unwrap());
+
     for i in entropy.iter().enumerate() {
         if i.0 == 5 {
             break;
@@ -92,4 +87,22 @@ pub fn filter(
         }
     }
     return res;
+}
+
+fn get_entropy(guess: &String, acceptable_set: &Vec<String>, hint_acceptable: &Vec<usize>) -> f64 {
+    let mut res = [0; 243];
+    for i in hint_acceptable {
+        let word = &acceptable_set[*i];
+        let state = judge(guess, word);
+        res[ALL_STATE.binary_search(&state).unwrap()] += 1;
+    }
+    let mut entropy: f64 = 0.0;
+    for i in res.iter() {
+        if *i == 0 {
+            continue;
+        }
+        let p = *i as f64 / hint_acceptable.len() as f64;
+        entropy -= p * p.ln();
+    }
+    return entropy;
 }
