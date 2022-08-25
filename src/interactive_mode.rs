@@ -14,7 +14,7 @@ pub fn interactive_mode(opt: &Opt) {
     let mut state = crate::json_parse::State::load(opt, &mut game_data);
 
     loop {
-        let mut hint_acceptable: Vec<usize> = (0..acceptable_set.len()).collect();
+        let mut filtered_answer: Vec<usize> = (0..acceptable_set.len()).collect();
         if opt.word.is_none() && !opt.random {
             println!("{}", "Please input your answer:".bold());
         }
@@ -37,11 +37,11 @@ pub fn interactive_mode(opt: &Opt) {
             ];
             if opt.hint {
                 if round != 0 {
-                    hint = crate::solver::solver(&acceptable_set, &hint_acceptable);
+                    hint = crate::solver::solver(&acceptable_set, &filtered_answer);
                 }
                 print!("HINT: ");
                 for i in hint.iter() {
-                    print!("{} ", i.purple());
+                    print!("{} ", i.to_ascii_uppercase().purple());
                 }
                 print!("\n");
             }
@@ -63,7 +63,7 @@ pub fn interactive_mode(opt: &Opt) {
 
             if opt.hint {
                 for i in guesses.iter().zip(guess_states.iter()) {
-                    hint_acceptable = filter(i.0, i.1, &acceptable_set, &hint_acceptable)
+                    filtered_answer = filter(i.0, i.1, &acceptable_set, &filtered_answer)
                 }
             }
 

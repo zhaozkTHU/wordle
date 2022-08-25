@@ -51,20 +51,6 @@ pub fn filter(
             continue;
         }
 
-        for j in guess_state.iter().enumerate() {
-            if *j.1 == LetterState::R {
-                for (i, k) in word.chars().enumerate() {
-                    if k == guess.chars().nth(j.0).unwrap() && !used[i] {
-                        qualified = false;
-                        break;
-                    }
-                }
-            }
-        }
-        if !qualified {
-            continue;
-        }
-
         for (i, j) in guess_state.iter().enumerate() {
             if *j == LetterState::Y {
                 let mut found = false;
@@ -78,6 +64,20 @@ pub fn filter(
                 if !found {
                     qualified = false;
                     break;
+                }
+            }
+        }
+        if !qualified {
+            continue;
+        }
+
+        for j in guess_state.iter().enumerate() {
+            if *j.1 == LetterState::R {
+                for (i, k) in word.chars().enumerate() {
+                    if k == guess.chars().nth(j.0).unwrap() && !used[i] {
+                        qualified = false;
+                        break;
+                    }
                 }
             }
         }
