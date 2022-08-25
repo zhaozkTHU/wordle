@@ -28,12 +28,12 @@ pub fn interactive_mode(opt: &Opt) {
         let mut guess_states: Vec<[LetterState; 5]> = Vec::new();
 
         for round in 0..6 {
-            let mut hint: Vec<String> = vec![
-                "tares".to_string(),
-                "lares".to_string(),
-                "rales".to_string(),
-                "rates".to_string(),
-                "teras".to_string(),
+            let mut hint: Vec<(String, f64)> = vec![
+                ("tares".to_string(), 6.19),
+                ("lares".to_string(), 6.15),
+                ("rales".to_string(), 6.11),
+                ("rates".to_string(), 6.10),
+                ("teras".to_string(), 6.08),
             ];
             if opt.hint {
                 if round != 0 {
@@ -41,7 +41,11 @@ pub fn interactive_mode(opt: &Opt) {
                 }
                 print!("HINT: ");
                 for i in hint.iter() {
-                    print!("{} ", i.to_ascii_uppercase().purple());
+                    print!(
+                        "{} {} ",
+                        i.0.to_ascii_uppercase().purple(),
+                        format!("{:.2}", i.1).purple()
+                    );
                 }
                 print!("\n");
             }
