@@ -152,9 +152,6 @@ fn get_entropy(guess: &String, acceptable_set: &Vec<String>, filtered_answer: &V
         let state = judge(guess, word);
         res[ALL_STATE.binary_search(&state).unwrap()] += 1;
     }
-    // if filtered_answer.len() == 2 {
-    //     println!("{:?}", res);
-    // }
     let mut entropy: f64 = 0.0;
     for i in res.iter() {
         if *i == 0 {
@@ -162,9 +159,6 @@ fn get_entropy(guess: &String, acceptable_set: &Vec<String>, filtered_answer: &V
         }
         let p = (*i as f64) / (filtered_answer.len() as f64);
         entropy -= p * p.log2();
-        // if filtered_answer.len() == 2 {
-        //     println!("{}", entropy);
-        // }
     }
     return entropy;
 }
