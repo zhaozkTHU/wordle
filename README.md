@@ -46,7 +46,7 @@
     - `pun fn add_game`在结构体中添加游戏局数信息
   - `impl Game` `pub fn new`创建新的`Game`结构体
   - `pub fn parse_config`解析`config.json`并对命令行参数结构体`opt: Opt`进行修改
-- `tui.rs`该文件部分代码仿照[官方文档](github.com/fdehau/tui-rs)示例代码并进行修改，实现了在tui上展示wordle的基础操作  
+- `tui.rs`该文件部分代码仿照[官方文档](https://github.com/fdehau/tui-rs)示例代码并进行修改，实现了在tui上展示wordle的基础操作  
   - `enum InputMode`输入框状态，包括普通模式与编辑模式
   - `enum MessageMode`对外显示信息状态，包括合法输入、不合法输入、胜利、失败、输入、输入答案
   - `pub struct App`包含需要在tui上显示的各种信息
